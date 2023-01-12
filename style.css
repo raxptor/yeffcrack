@@ -1,0 +1,38 @@
+body {
+    background-color: #eee;
+    color: gray;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+textarea.gridview {
+	width: 500px;
+	height: 300px;
+}
+
+x-cracks-list {
+	display: block;
+	background-color: #fff;
+}
+
+x-crack {
+	margin: 3px;
+	padding: 8px;
+	display: block;
+	border: 1px solid gray;
+}
+
+x-crack-info {
+	display: inline-block;
+	width: 150px;
+	vertical-align: top;
+}
+
+x-crack-content {
+	display: inline-block;
+	vertical-align: top;
+}
+
+x-crack-content textarea {
+	width: 800px;
+	height: 100px;
+}
