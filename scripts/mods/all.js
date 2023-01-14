@@ -1,4 +1,6 @@
 define(function(require, exports, module) {
+
+	exports.modules_for_add = ['make_grid', 'transpose', 'pair_up', 'remove_nulls', 'transpose', 'cut_half', 'polybius', 'grid_view', 'polybius_view'];
 	exports.input = {
 		create: function(d) { // returns 'data' object
 			return {
@@ -13,6 +15,7 @@ define(function(require, exports, module) {
 			return ta;
 		},
 		title: "Input",
+		prevent_delete: true,
 		process: function(d) {
 			console.log("process", d);
 			var txt = d.data.text;
@@ -26,7 +29,7 @@ define(function(require, exports, module) {
 					output.push(r);
 			}
 			d.output = output;
-		}
+		},
 	};
 	exports.make_grid = {
 		create: function(d) { // returns 'data' object
@@ -128,7 +131,8 @@ define(function(require, exports, module) {
 			d.container.appendChild(ta);
 			return ta;
 		},
-		title: "Output"
+		title: "Output",
+		prevent_delete: true
 	};
 	exports.transpose = {
 		create: function() { 

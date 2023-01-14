@@ -36,3 +36,45 @@ x-crack-content textarea {
 	width: 800px;
 	height: 100px;
 }
+
+x-buttons {
+	margin-left: 5px;
+}
+
+x-crack button {
+	height:20px;
+	margin-bottom: 5px;
+}
+
+x-modal {
+	position: fixed;
+	top: 0px;
+	left: 0px;
+	right: 0px;
+	bottom: 0px;
+	background-color: #000;
+	opacity: 0.4;
+	z-index: 1;
+}
+
+x-dialog-box {
+	position: absolute;
+	left: 50%;
+	top: 100px;
+	display: block;
+	margin-left: -250px;
+	width: 500px;
+	padding: 10px;
+	background-color: #eee;
+	border: 1px solid black;
+	opacity: 1.0;
+	z-index: 2;
+}
+
+button.picker {
+	margin: 4px;
+}
+
+body.error {
+	background-color: #f66;
+}
