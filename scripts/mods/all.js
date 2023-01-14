@@ -1,6 +1,6 @@
 define(function(require, exports, module) {
 
-	exports.modules_for_add = ['make_grid', 'transpose', 'pair_up', 'remove_nulls', 'transpose', 'cut_half', 'polybius', 'grid_view', 'polybius_view'];
+	exports.modules_for_add = ['make_grid', 'transpose', 'pair_up', 'remove_characters', 'transpose', 'cut_half', 'polybius', 'grid_view'];
 	exports.input = {
 		create: function(d) { // returns 'data' object
 			return {
@@ -10,11 +10,15 @@ define(function(require, exports, module) {
 		make_ui: function(d) {
 			var ta = document.createElement('textarea');
 			ta.textContent = String(d.data.text).replace('\n', '').replace('\r', '').trim();
+			ta.onchange = function() {
+				d.data.text = ta.value;
+				d.fn_reprocess();
+			};
 			console.log(d);
 			d.container.appendChild(ta);
 			return ta;
 		},
-		title: "Input",
+		title: "Input (ignore space)",
 		prevent_delete: true,
 		process: function(d) {
 			console.log("process", d);
@@ -67,7 +71,7 @@ define(function(require, exports, module) {
 				var output = new Array(d.input.length/2);
 				var j = 0;
 				for (var i=0;i<d.input.length;i+=2) {
-					output[j++] = d.input[i] * 10 + d.input[i+1];
+					output[j++] = 100 + d.input[i] * 10 + d.input[i+1];
 				}
 				d.output = output;
 			}
@@ -81,11 +85,8 @@ define(function(require, exports, module) {
 		},
 		title: "PairUp"
 	};
-	exports.remove_nulls = {
+	exports.remove_characters = {
 		create: function() { return {
-			last_nulls: {
-				0: true
-			},
 			always_nulls: ""
 		}; },
 		process: function(d) {
@@ -93,15 +94,6 @@ define(function(require, exports, module) {
 			for (var i=0;i<d.input.length;i++)
 				if (d.data.always_nulls.indexOf(d.input[i]) == -1)
 					output.push(d.input[i]);
-			var last_nulls = d.data.last_nulls;
-			var kill = 0;
-			while (output.length > 0 && last_nulls[output[output.length-1]] === true) {
-				output.pop();
-				if (++kill > 3000) {
-					console.log("aah");
-					break;
-				}
-			}
 			d.output = output;
 		},
 		make_ui: function(d) {
@@ -116,7 +108,7 @@ define(function(require, exports, module) {
 				ns: ns
 			};
 		},
-		title: "RemoveNulls"
+		title: "RemoveCharacters"
 	};
 	exports.output = {
 		create: function() { return {}; },
@@ -193,17 +185,85 @@ define(function(require, exports, module) {
 		},
 		process: function(d) {
 			var out = [];
+			var indices = [];
+
+			var real = new Array(25);
+			var left = "ABCDEFGHIKLMNOPQRSTUVWXYZ";
+			var inp = d.data.box;
+			for (var i=0;i<25;i++) {
+				var c = inp.charAt(i);
+				if (c != '?') {
+					real[i] = c;
+					left = left.replace(c, '');
+				}
+			}
+			var c = 0;
+			for (var i=0;i<25;i++) {
+				if (inp.charAt(i) == '?') {
+					real[i] = left.charAt(c++);
+				}
+			}
+
 			for (var i=0;i<d.input.length;i++) {
 				var a = Math.floor(d.input[i] / 10);
 				var b = d.input[i] % 10;
-				var c = (a-1)*5+(b-1);
+				var y = (a-1) % 5;
+				var x = (b-1) % 5;
+				var c = y*5+x;
 				if (c >= 0 && c < 25) {
-					out.push(d.data.box.charAt(c));
+					indices.push(c);
+					out.push(real[c]);
 				}
 			}
+			if (d.ui) {
+				var root = d.ui;
+				while (root.childNodes.length > 0) {
+					root.removeChild(root.childNodes[0]);
+				}
+
+				var count = [];
+				for (var i=0;i<d.data.box.length;i++)
+					count.push(0);
+				for (var i=0;i<indices.length;i++)
+					count[indices[i]]++;
+
+				for (var y=0;y<5;y++) {
+					var rr = document.createElement('x-grid-row');
+					for (var x=0;x<5;x++) {
+						var b = document.createElement('x-grid-entry');
+						b.textContent = real[y*5+x];
+						rr.appendChild(b);
+					}
+					var spacer = document.createElement('x-grid-entry');
+					spacer.style.opacity = 0.0;
+					rr.appendChild(spacer);
+					for (var x=0;x<5;x++) {
+						var b = document.createElement('x-grid-entry');
+						b.textContent = count[y*5+x];// d.data.box[y*5+x];
+						rr.appendChild(b);
+					}
+
+					root.appendChild(rr);
+				}
+			}
+
 			d.output = out;
 		},
 		make_ui: function(d) {
+			var fixed = document.createElement('input');
+			fixed.value = d.data.box;
+			fixed.style.width = "300px";
+			fixed.onchange = function() {
+				d.data.box = fixed.value;
+				while (d.data.box.length < 25)
+					d.data.box = d.data.box + "?";
+				fixed.value = d.data.box;
+				document.fn_reprocess();
+			}
+			d.container.appendChild(fixed);
+			var ta = document.createElement('x-grid');
+			d.container.appendChild(ta);
+			return ta;
 		},
 		title: "Polybius"
 	};	
@@ -214,32 +274,36 @@ define(function(require, exports, module) {
 		process: function(d) {
 			d.output = d.input;
 			if (d.ui && d.grid) {
-				var rows = [];
+				var root = d.ui;
+				while (root.childNodes.length > 0) {
+					root.removeChild(root.childNodes[0]);
+				}
 				var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
 				for (var y=0;y<height;y++) {
-					rows.push(d.input.slice(y*d.grid.width, (y+1)*d.grid.width).join(' '));
+					var rr = document.createElement('x-grid-row');
+					for (var x=0;x<d.grid.width;x++) {
+						var b = document.createElement('x-grid-entry');
+						var idx = y*d.grid.width+x;
+						if (idx < d.input.length && d.input[idx] >= 0) {
+							var val = d.input[idx];
+							if (val >= 100)
+								b.textContent = String(val).slice(1, 3);
+							else
+								b.textContent = val;
+						} else {
+							b.textContent = '?';
+						}
+						rr.appendChild(b);
+					}
+					root.appendChild(rr);
 				}
-				d.ui.textContent = rows.join('\n');
 			}
 		},
 		make_ui: function(d) {
-			var ta = document.createElement('textarea');
-			ta.classList.add('gridview');
-			ta.textContent = "";
+			var ta = document.createElement('x-grid');
 			d.container.appendChild(ta);
-			return ta;			
+			return ta;
 		},
 		title: "Grid View"
-	};	
-
-	exports.polybius_view = {
-		create: function() { return {}; },
-		process: function(d) {
-			d.output = d.input;
-		},
-		make_ui: function(root) {
-			
-		},
-		title: "Polybius View"
 	};	
 });

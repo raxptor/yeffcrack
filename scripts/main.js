@@ -3,12 +3,50 @@ define(function(require, exports, module) {
 	var all_mods = require('scripts/mods/all.js');
 	var picker = require('scripts/picker.js');
 
+	function serialize(cracks) {
+		var storage = [1];
+		for (var x in cracks) {
+			storage.push( {
+				t: cracks[x].type,
+				d: cracks[x].data,
+				e: cracks[x].enabled
+			});
+		}
+		return btoa(JSON.stringify(storage));
+	}
+
+	function deserialize(txt) {
+		if (txt.length < 4)
+			return;
+		var arr = JSON.parse(atob(txt.substr(1)));
+		console.log("It is", arr);
+		var cracks = [];
+		if (arr == undefined || arr.length < 2 || arr[0] != 1)
+			return null;
+		for (var x=1;x<arr.length;x++) {
+			if (!all_mods[arr[x].t])
+				continue;
+			cracks.push({
+				type: arr[x].t,
+				data: arr[x].d,
+				enabled: arr[x].e,
+				cls: all_mods[arr[x].t]
+			});
+		}
+		console.log("Deserialized", cracks);
+		return cracks;
+	}
+
 	function mk_insert_button(cracks, idx) {
 		var btn = document.createElement('button');
 		btn.textContent = "InsertCk " + idx;
 		btn.classList.add('insert');
 		btn.onclick = function() {
-			picker.pick(all_mods.modules_for_add, function(opt) {
+			var list = [];
+			for (var x in all_mods.modules_for_add) {
+				list.push(all_mods[all_mods.modules_for_add[x]].title);
+			}
+			picker.pick(list, function(opt) {
 				var tn = all_mods.modules_for_add[opt];
 				var mod = all_mods[tn];
 				console.log("picked", opt, " ", idx);
@@ -42,7 +80,7 @@ define(function(require, exports, module) {
 			var ck = cks[x];
 			var el_enabled = document.createElement('input');
 			el_enabled.setAttribute("type", "checkbox");
-			el_enabled.checked = true;
+			el_enabled.checked = ck.enabled;
 			(function(el, ck) {
 				el.onchange = function() {
 					ck.enabled = el.checked;
@@ -103,7 +141,7 @@ define(function(require, exports, module) {
 				cracks[i].cls.process(d);
 				if (d.error)
 					console.log(d.error);
-				console.log(cracks[i].type, "outputed", d.output);
+				//console.log(cracks[i].type, "outputed", d.output);
 				d.input = d.output;
 			} catch (e) {
 				return false;
@@ -114,7 +152,7 @@ define(function(require, exports, module) {
 	
 	exports.startup = function() {
 		/* 'make_grid', 'transpose', 'pair_up', 'transpose', 'cut_half', 'polybius', 'grid_view', */
-		var cracks = create_default_instances(['input', 'remove_nulls', 'output']);
+		var cracks = deserialize(location.hash) || create_default_instances(['input', 'remove_characters', 'output']);
 		var uis;
 		document.fn_rebuild = function() {
 			console.log("Reload!");
@@ -126,6 +164,7 @@ define(function(require, exports, module) {
 			document.fn_reprocess(uis);
 		}
 		document.fn_reprocess = function() {
+			this.location.hash = '#' + serialize(cracks);
 			if (!process_cracks(cracks, uis)) {
 				document.body.classList.add('error');
 			} else {
