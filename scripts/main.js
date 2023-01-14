@@ -1,6 +1,7 @@
 define(function(require, exports, module) {
 
 	var all_mods = require('scripts/mods/all.js');
+	var codegen = require('scripts/mods/codegen.js');
 	var picker = require('scripts/picker.js');
 
 	function serialize(cracks) {
@@ -75,7 +76,7 @@ define(function(require, exports, module) {
 
 	function draw_cracks(cks) {
 		var root = document.getElementById('cracks-list');
-		var uis = [];		
+		var uis = [];
 		for (var x in cks) {
 			var ck = cks[x];
 			var el_enabled = document.createElement('input');
@@ -97,7 +98,7 @@ define(function(require, exports, module) {
 			el_crack.appendChild(el_info);
 			el_crack.appendChild(el_content);
 			var name = document.createElement('span');
-			name.innerText = all_mods[ck.type].title;
+			name.innerText = x + "." + all_mods[ck.type].title;
 			el_info.appendChild(name);
 			uis.push(all_mods[ck.type].make_ui({
 				fn_rebuild: function() { document.fn_rebuild(); },
@@ -129,8 +130,119 @@ define(function(require, exports, module) {
 		return cracks;
 	}
 
+	function generate_code(cracks, start, input) {
+		var lines = [];
+		var inp = [];
+		var inp_len;
+		console.log("INPUT:", input, typeof input);
+		if (typeof input == "string") {
+			inp.push(input);
+			inp_len = input.length;
+		} else {
+			for (var x in input) {
+				var cc = input[x];
+				if (cc >= 100) {
+					var val = (cc-100)
+					inp.push("\\x" + Math.floor(val/10) + Math.floor(val%10));
+				}
+			}
+			inp_len = inp.length;
+		}
+		lines.push("#include <memory.h>");
+		lines.push("#include <stdio.h>");
+		lines.push("#include \"mtwister.h\"");
+		lines.push("int score(const char* buf, int length);");
+		lines.push("typedef struct Algo_t {");
+		for (var c=start;c<cracks.length;c++) {
+			var gen = codegen[cracks[c].type];
+			if (gen && gen.struct) {
+				gen.struct({
+					prefix: cracks[c].type + "_" + c,
+					lines: lines,
+					data: cracks[c].data
+				});
+			}
+		}
+
+		lines.push("} Algo;");
+		lines.push(`int algo_size() { return sizeof(Algo); }`);
+		lines.push(`void algo_initial_guess(void* ptr, int as_given, MTRand* rand) {\n\tAlgo* inst = (Algo*)ptr;`);
+		for (var c=start;c<cracks.length;c++) {
+			var gen = codegen[cracks[c].type];
+			if (gen && gen.initial_guess) {
+				gen.initial_guess({
+					prefix: cracks[c].type + "_" + c,
+					lines: lines,
+					data: cracks[c].data
+				});
+			}
+		}
+		lines.push("}");
+		lines.push(`void algo_random_walk(void* ptr, MTRand* rand) {\n\tAlgo* inst = (Algo*)ptr;`);
+		for (var c=start;c<cracks.length;c++) {
+			var gen = codegen[cracks[c].type];
+			if (gen && gen.initial_guess) {
+				gen.random_walk({
+					prefix: cracks[c].type + "_" + c,
+					lines: lines,
+					data: cracks[c].data
+				});
+			}
+		}
+		lines.push("}");		
+
+		lines.push(`int algo_score(void* ptr, int print) {\n\tAlgo* inst = (Algo*)ptr;`);
+		lines.push("int input_len = " + inp_len + ";");
+		lines.push("const unsigned char *input = \"" + inp.join('') + "\";");
+		lines.push("");
+		lines.push("unsigned char tmp0[" + (2*inp_len) + "];");
+		lines.push("unsigned char tmp1[" + (2*inp_len) + "];");
+		lines.push("");
+		lines.push("const unsigned char* cur_in = input;");
+		lines.push("int cur_in_len = input_len;");
+		lines.push("unsigned char* cur_out = tmp0;");
+		lines.push("int cur_out_len;");
+		lines.push("");
+		var d = {
+			input: input
+		}
+		var bs = 0;
+
+		for (var c=start;c<cracks.length;c++) {
+			lines.push("// " + cracks[c].cls.title);
+			var gen = codegen[cracks[c].type];
+			if (gen && gen.write) {
+				gen.write({
+					prefix: cracks[c].type + "_" + c,
+					lines: lines,
+					data: cracks[c].data
+				});
+				lines.push("cur_in_len = cur_out_len;");
+				lines.push("cur_in = cur_out;");
+				lines.push("cur_out = tmp" + ((++bs)%2) + ";");
+				lines.push("");
+			}
+			d.data = cracks[c].data;
+			cracks[c].cls.process(d);
+			d.input = d.output;
+		}
+		lines.push(`	
+		if (print) {
+			printf("Output is: ");
+			for (int i = 0; i < cur_in_len; i++)
+				printf("%c", cur_in[i]);
+			printf("\\n");
+		}`);
+		lines.push("return score(cur_in, cur_in_len);");
+		lines.push("}");
+		return lines.join("\n").replaceAll("\t\t\t", "");
+	}
+
 	function process_cracks(cracks, uis) {
-		var d = {};
+		var d = { };
+		var input_at_step = 1;
+		var input_data = "";
+		var got_crack_step = false;
 		for (var i=0;i<cracks.length;i++) {
 			if (!cracks[i].enabled)
 				continue;
@@ -142,10 +254,19 @@ define(function(require, exports, module) {
 				if (d.error)
 					console.log(d.error);
 				//console.log(cracks[i].type, "outputed", d.output);
+				if (!got_crack_step && cracks[i].cls.crack_step) {
+					input_at_step = i;
+					input_data = d.input;
+					console.log("Actual input happens at step ", input_at_step, " with data ", d.input);
+					got_crack_step = true;
+				}
 				d.input = d.output;
 			} catch (e) {
 				return false;
 			}
+		}
+		if  (uis) {
+			document.getElementById('code').textContent = generate_code(cracks, input_at_step, input_data)
 		}
 		return true;
 	}

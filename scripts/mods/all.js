@@ -1,6 +1,6 @@
 define(function(require, exports, module) {
 
-	exports.modules_for_add = ['make_grid', 'transpose', 'pair_up', 'remove_characters', 'transpose', 'cut_half', 'polybius', 'grid_view'];
+	exports.modules_for_add = ['input_text', 'make_grid', 'pair_up', 'remove_characters', 'transpose', 'cut_half', 'polybius', 'grid_view', 'coltransp'];
 	exports.input = {
 		create: function(d) { // returns 'data' object
 			return {
@@ -18,13 +18,14 @@ define(function(require, exports, module) {
 			d.container.appendChild(ta);
 			return ta;
 		},
-		title: "Input (ignore space)",
+		title: "Input - numbers (ignore space)",
 		prevent_delete: true,
 		process: function(d) {
 			console.log("process", d);
 			var txt = d.data.text;
 			var map = {
-				'0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8':8, '9':9
+				'0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8':8, '9':9,
+				'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6, 'G': 7, 'H': 8, 'I':9, 'J': 10
 			};
 			var output = [];
 			for (var i=0;i<txt.length;i++) {
@@ -32,9 +33,32 @@ define(function(require, exports, module) {
 				if (r !== undefined)
 					output.push(r);
 			}
+			console.log(map, "=>", output);
 			d.output = output;
 		},
 	};
+	exports.input_text = {
+		create: function(d) { // returns 'data' object
+			return {
+				text: `ABCDE`
+			}
+		},
+		make_ui: function(d) {
+			var ta = document.createElement('textarea');
+			ta.textContent = String(d.data.text).replace('\n', '').replace('\r', '').trim();
+			ta.onchange = function() {
+				d.data.text = ta.value;
+				d.fn_reprocess();
+			};
+			d.container.appendChild(ta);
+			return ta;
+		},
+		title: "Input - text",
+		prevent_delete: true,
+		process: function(d) {
+			d.output = d.data.text;
+		},
+	};	
 	exports.make_grid = {
 		create: function(d) { // returns 'data' object
 			return {
@@ -114,7 +138,10 @@ define(function(require, exports, module) {
 		create: function() { return {}; },
 		process: function(d) {
 			if (d.ui) {
-				d.ui.textContent = d.input.join('');
+				if (typeof d.input == "string")
+					d.ui.textContent = d.input;
+				else
+					d.ui.textContent = d.input.join('');
 			}
 		},
 		make_ui: function(d) {
@@ -151,6 +178,80 @@ define(function(require, exports, module) {
 		},
 		title: "Transpose"
 	};
+
+	function make_order(d) {
+		var order = [];
+		for (var i=0;i<d.data.keyword.length;i++) {
+			order.push({
+				value: d.data.keyword.charCodeAt(i),
+				index: i
+			});
+		}
+		order.sort(function(a,b){return a.value - b.value});
+		if (!d.data.inverse) {
+			var o = [];
+			for (var i=0;i<order.length;i++)
+				o[order[i].index] = { index: i };
+			order = o;
+		}
+		return order;
+	};
+
+	exports.coltransp = {
+		create: function() { 
+			return {
+				keyword: "MANCHESTER", 
+				inverse: false
+			}; 
+		},
+		make_order: make_order,
+		process: function(d) {
+			d.output = d.input;
+			var order = make_order(d);
+			d.grid = { width: order.length };
+			var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
+			var output = [];
+			for (var y=0;y<height;y++) {
+				for (var x=0;x<d.grid.width;x++) {
+					var outp = order[x].index;
+					var idx = y * d.grid.width + outp;
+					if (idx < d.input.length)
+						output.push(d.input[idx]);
+					else
+						output.push('-1');
+				}
+			}
+			d.output = output;
+		},
+		make_ui: function(d) {
+			var fixed = document.createElement('input');
+			fixed.value = d.data.keyword;
+			fixed.style.width = "300px";
+			fixed.onchange = function() {
+				d.data.keyword = fixed.value;
+				document.fn_reprocess();
+			}
+			d.container.appendChild(fixed);
+			var inverse = document.createElement('input');
+			inverse.type = "checkbox";
+			inverse.checked = d.inverse;
+			inverse.onchange = function() {
+				d.data.inverse = inverse.checked;
+				document.fn_reprocess();
+			}
+			d.container.appendChild(inverse);
+
+			var s = document.createElement('span');
+			s.textContent = 'Inverse';
+			d.container.appendChild(s);
+
+			var ta = document.createElement('x-grid');
+			d.container.appendChild(ta);
+			return ta;
+		},
+		title: "ColTransp",
+		crack_step: true
+	};	
 	exports.cut_half = {
 		create: function() { 
 			return {}; 
@@ -203,7 +304,6 @@ define(function(require, exports, module) {
 					real[i] = left.charAt(c++);
 				}
 			}
-
 			for (var i=0;i<d.input.length;i++) {
 				var a = Math.floor(d.input[i] / 10);
 				var b = d.input[i] % 10;
@@ -265,7 +365,8 @@ define(function(require, exports, module) {
 			d.container.appendChild(ta);
 			return ta;
 		},
-		title: "Polybius"
+		title: "Polybius",
+		crack_step: true
 	};	
 	exports.grid_view = {
 		create: function() { 
@@ -284,14 +385,20 @@ define(function(require, exports, module) {
 					for (var x=0;x<d.grid.width;x++) {
 						var b = document.createElement('x-grid-entry');
 						var idx = y*d.grid.width+x;
-						if (idx < d.input.length && d.input[idx] >= 0) {
-							var val = d.input[idx];
-							if (val >= 100)
-								b.textContent = String(val).slice(1, 3);
-							else
-								b.textContent = val;
+						if (idx < d.input.length) {
+							if (typeof d.input[idx] == 'string')
+								b.textContent = d.input[idx];
+							else if (d.input[idx] >= 0) {
+								var val = d.input[idx];
+								if (val >= 100)
+									b.textContent = String(val).slice(1, 3);
+								else
+									b.textContent = val; 
+							} else {
+								b.textContent = '?';
+							}
 						} else {
-							b.textContent = '?';
+							b.textContent = '!';
 						}
 						rr.appendChild(b);
 					}

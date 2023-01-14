@@ -100,3 +100,8 @@ button.picker {
 body.error {
 	background-color: #f66;
 }
+
+.code {
+	border: 1px solid;
+	padding: 5px;	
+}
