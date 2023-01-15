@@ -11,26 +11,30 @@ define(function(require, exports, module) {
 					inst->${d.prefix}_map[i] = def[i];
 				}
 				if (!as_given) {
-					for (int i = 0; i < 24; i++) {
-						int swap = (genRandLong(rand) & 0xff) % (25-i) + i;
-						char t = inst->${d.prefix}_map[i];
-						inst->${d.prefix}_map[i] = inst->${d.prefix}_map[swap];
-						inst->${d.prefix}_map[swap] = t;
+					char used[256];
+					memset(inst->${d.prefix}_map, 0x00, 25);
+					memset(used, 0x00, 25);
+					const char *word = word_get_random(0, rand);
+					int p = 0;
+					for (unsigned int i = 0; i < strlen(word); i++) {
+						char c = word[i];
+						if (!used[c-'A']) {
+							inst->${d.prefix}_map[p++] = c;
+							used[c-'A'] = 1;
+						}
+					}
+					for (unsigned int i = 0; i < strlen(def); i++) {
+						char c = def[i];
+						if (!used[c-'A']) {
+							inst->${d.prefix}_map[p++] = c;
+							used[c-'A'] = 1;
+						}
 					}
 				}`);
 		},
 		random_walk: function(d) {
 			d.lines.push(`
-				{
-					int a, b;
-					do {
-					a = genRandLong(rand) & 31;
-					b = genRandLong(rand) & 31;
-					} while (a == b || a >= 25 || b >= 25);
-					char t = inst->${d.prefix}_map[a];
-					inst->${d.prefix}_map[a] = inst->${d.prefix}_map[b];
-					inst->${d.prefix}_map[b] = t;
-				}
+				permutation_walk(inst->${d.prefix}_map, rand, 25);
 			`);
 		},		
 		write: function(d) {
@@ -40,7 +44,14 @@ define(function(require, exports, module) {
 					const char x = cur_in[i] & 0xf;
 					cur_out[i] = inst->${d.prefix}_map[(y-1) * 5 + (x-1)];
 				}
-				cur_out_len = input_len;
+				cur_out_len = cur_in_len;
+			`);
+		},
+		print: function(d) {
+			d.lines.push(`
+				for (int i = 0; i < 25; i++) {
+					printf("%c", inst->${d.prefix}_map[i]);
+				}
 			`);
 		}
 	};
@@ -69,14 +80,7 @@ define(function(require, exports, module) {
 			var kl = d.data.keyword.length;
 			d.lines.push(`
 				{
-					int a, b;
-					do {
-					a = genRandLong(rand) & 63;
-					b = genRandLong(rand) & 63;
-					} while (a == b || a >= ${kl} || b >= ${kl});
-					char t = inst->${d.prefix}_map[a];
-					inst->${d.prefix}_map[a] = inst->${d.prefix}_map[b];
-					inst->${d.prefix}_map[b] = t;
+					permutation_walk(inst->${d.prefix}_map, rand, ${kl});
 				}
 			`);
 		},		
@@ -86,22 +90,54 @@ define(function(require, exports, module) {
 				for (int i = 0; i < cur_in_len; i++) {
 					int col = i % ${kl};
 					int row = i / ${kl};
-					int c = row * ${kl} + inst->${d.prefix}_map[col];
+					int c;
+					if (${d.data.double?"1":"0"})
+						c = inst->${d.prefix}_map[row] * ${kl} + inst->${d.prefix}_map[col];
+					else
+						c = row * ${kl} + inst->${d.prefix}_map[col];
 					cur_out[i] = cur_in[c];
 				}
-				cur_out_len = input_len;
+				cur_out_len = cur_in_len;
+			`);
+		},
+		print: function(d) {
+			var kl = d.data.keyword.length;
+			d.lines.push(`
+				for (int i = 0; i < ${kl}; i++) {
+					printf(" %d", inst->${d.prefix}_map[i]);
+				}
 			`);
 		}
 	}
 
+	exports.transpose = {
+		write: function(d) {
+			var gw = d.process_d.grid.width;
+			var height = Math.floor((d.process_d.input.length + d.process_d.grid.width - 1)/(d.process_d.grid.width));
+			d.lines.push(`
+				int tp_out = 0;
+				for (int x=0;x<${gw};x++)
+				{
+					for (int y=0;y<${height};y++)
+					{
+						int idx = y * ${gw} + x;
+						if (idx < cur_in_len)
+							cur_out[tp_out++] = cur_in[idx];
+						else
+							cur_out[tp_out++] = -1;
+					}
+				}
+			`);
+		},
+	}
+
 	exports.pair_up = {
 		write: function(d) {
-			var kl = d.data.keyword.length;
 			d.lines.push(`
-				for (int i = 0; i < cur_in_len-1; i+=2) {
-					cur_out[i] = (cur_in[c] << 4) | cur_in[c+1];
+				for (int i = 0, o=0; i < cur_in_len-1; i+=2) {
+					cur_out[o++] = (cur_in[i] << 4) | cur_in[i+1];
 				}
-				cur_out_len = input_len;
+				cur_out_len = cur_in_len/2;
 			`);
 		}
 	}

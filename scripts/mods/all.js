@@ -1,6 +1,6 @@
 define(function(require, exports, module) {
 
-	exports.modules_for_add = ['input_text', 'make_grid', 'pair_up', 'remove_characters', 'transpose', 'cut_half', 'polybius', 'grid_view', 'coltransp'];
+	exports.modules_for_add = ['input_text', 'make_grid', 'pair_up', 'remove_characters', 'transpose', 'cut_half', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp'];
 	exports.input = {
 		create: function(d) { // returns 'data' object
 			return {
@@ -172,6 +172,7 @@ define(function(require, exports, module) {
 					}
 				}
 				d.output = output;
+				d.grid.width = height;
 			}
 		},
 		make_ui: function(d) {
@@ -201,7 +202,8 @@ define(function(require, exports, module) {
 		create: function() { 
 			return {
 				keyword: "MANCHESTER", 
-				inverse: false
+				inverse: false,
+				double: false
 			}; 
 		},
 		make_order: make_order,
@@ -212,9 +214,12 @@ define(function(require, exports, module) {
 			var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
 			var output = [];
 			for (var y=0;y<height;y++) {
+				var src_y = y;
+				if (d.data.double)
+					src_y = order[y].index;
 				for (var x=0;x<d.grid.width;x++) {
 					var outp = order[x].index;
-					var idx = y * d.grid.width + outp;
+					var idx = src_y * d.grid.width + outp;
 					if (idx < d.input.length)
 						output.push(d.input[idx]);
 					else
@@ -234,7 +239,7 @@ define(function(require, exports, module) {
 			d.container.appendChild(fixed);
 			var inverse = document.createElement('input');
 			inverse.type = "checkbox";
-			inverse.checked = d.inverse;
+			inverse.checked = d.data.inverse;
 			inverse.onchange = function() {
 				d.data.inverse = inverse.checked;
 				document.fn_reprocess();
@@ -245,11 +250,26 @@ define(function(require, exports, module) {
 			s.textContent = 'Inverse';
 			d.container.appendChild(s);
 
+
+			var double = document.createElement('input');
+			double.type = "checkbox";
+			double.checked = d.data.double;
+			double.onchange = function() {
+				d.data.double = double.checked;
+				document.fn_reprocess();
+			}
+			d.container.appendChild(double);
+
+			var s2 = document.createElement('span');
+			s2.textContent = 'Double';
+			d.container.appendChild(s2);
+
+
 			var ta = document.createElement('x-grid');
 			d.container.appendChild(ta);
 			return ta;
 		},
-		title: "ColTransp",
+		title: "Transposition",
 		crack_step: true
 	};	
 	exports.cut_half = {
@@ -276,8 +296,27 @@ define(function(require, exports, module) {
 		},
 		make_ui: function(d) {
 		},
-		title: "CutHalf"
+		title: "CutHalfLR"
 	};
+	exports.cut_half_tb = {
+		create: function() { 
+			return {}; 
+		},
+		process: function(d) {
+			d.output = output;
+			if (d.grid) {
+				var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
+				var output = [];
+				for (var i=0;i<d.grid.width*height/2;i++) {
+					output.push(d.input[i]);
+				}
+				d.output = output;
+			}
+		},
+		make_ui: function(d) {
+		},
+		title: "CutHalfTB"
+	};	
 	exports.polybius = {
 		create: function() { 
 			return {

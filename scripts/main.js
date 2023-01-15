@@ -141,19 +141,31 @@ define(function(require, exports, module) {
 		} else {
 			for (var x in input) {
 				var cc = input[x];
-				if (cc >= 100) {
-					var val = (cc-100)
-					inp.push("\\x" + Math.floor(val/10) + Math.floor(val%10));
+				if (typeof cc == 'number') {
+					if (cc >= 100) {
+						var val = (cc-100)
+						inp.push("\\x" + Math.floor(val/10) + Math.floor(val%10));
+					} else {
+						inp.push("\\x" + Math.floor(cc));
+					}
+				} else {
+					inp.push(cc);
 				}
 			}
 			inp_len = inp.length;
 		}
+		lines.push("//" + location.hash);
 		lines.push("#include <memory.h>");
 		lines.push("#include <stdio.h>");
+		lines.push("#include <string.h>");		
 		lines.push("#include \"mtwister.h\"");
+		lines.push("void permutation_walk(char* p, MTRand* rand, int len);");
+		lines.push("const char* word_get_random(int length, MTRand* rand);");
 		lines.push("int score(const char* buf, int length);");
 		lines.push("typedef struct Algo_t {");
 		for (var c=start;c<cracks.length;c++) {
+			if (!cracks[c].enabled)
+				continue;
 			var gen = codegen[cracks[c].type];
 			if (gen && gen.struct) {
 				gen.struct({
@@ -168,6 +180,8 @@ define(function(require, exports, module) {
 		lines.push(`int algo_size() { return sizeof(Algo); }`);
 		lines.push(`void algo_initial_guess(void* ptr, int as_given, MTRand* rand) {\n\tAlgo* inst = (Algo*)ptr;`);
 		for (var c=start;c<cracks.length;c++) {
+			if (!cracks[c].enabled)
+				continue;
 			var gen = codegen[cracks[c].type];
 			if (gen && gen.initial_guess) {
 				gen.initial_guess({
@@ -178,18 +192,22 @@ define(function(require, exports, module) {
 			}
 		}
 		lines.push("}");
-		lines.push(`void algo_random_walk(void* ptr, MTRand* rand) {\n\tAlgo* inst = (Algo*)ptr;`);
+		lines.push(`void algo_random_walk(void* ptr, long mask, MTRand* rand) {\n\tAlgo* inst = (Algo*)ptr;`);
 		for (var c=start;c<cracks.length;c++) {
+			if (!cracks[c].enabled)
+				continue;
 			var gen = codegen[cracks[c].type];
 			if (gen && gen.initial_guess) {
+				lines.push("if (mask & " + (1 << c) + ") {");
 				gen.random_walk({
 					prefix: cracks[c].type + "_" + c,
 					lines: lines,
 					data: cracks[c].data
 				});
+				lines.push("}");
 			}
 		}
-		lines.push("}");		
+		lines.push("}");
 
 		lines.push(`int algo_score(void* ptr, int print) {\n\tAlgo* inst = (Algo*)ptr;`);
 		lines.push("int input_len = " + inp_len + ";");
@@ -206,16 +224,18 @@ define(function(require, exports, module) {
 		var d = {
 			input: input
 		}
-		var bs = 0;
-
+		var bs = 0;		
 		for (var c=start;c<cracks.length;c++) {
+			if (!cracks[c].enabled)
+				continue;
 			lines.push("// " + cracks[c].cls.title);
 			var gen = codegen[cracks[c].type];
 			if (gen && gen.write) {
 				gen.write({
 					prefix: cracks[c].type + "_" + c,
 					lines: lines,
-					data: cracks[c].data
+					data: cracks[c].data,
+					process_d: d,
 				});
 				lines.push("cur_in_len = cur_out_len;");
 				lines.push("cur_in = cur_out;");
@@ -231,6 +251,22 @@ define(function(require, exports, module) {
 			printf("Output is: ");
 			for (int i = 0; i < cur_in_len; i++)
 				printf("%c", cur_in[i]);
+			printf(" ");`);
+
+		for (var c=start;c<cracks.length;c++) {
+			if (!cracks[c].enabled)
+				continue;
+			var gen = codegen[cracks[c].type];
+			if (gen && gen.print) {
+				lines.push("printf(\" " + cracks[c].type + ":\");");
+				gen.print({
+					prefix: cracks[c].type + "_" + c,
+					lines: lines,
+					data: cracks[c].data
+				});
+			}
+		}	
+		lines.push(`
 			printf("\\n");
 		}`);
 		lines.push("return score(cur_in, cur_in_len);");
