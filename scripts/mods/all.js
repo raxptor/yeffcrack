@@ -1,6 +1,21 @@
 define(function(require, exports, module) {
 
-	exports.modules_for_add = ['input_text', 'make_grid', 'pair_up', 'remove_characters', 'transpose', 'cut_half', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp'];
+	exports.modules_for_add = ['input_text', 'make_grid', 'pair_up', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp'];
+
+	function add_inverse_ui(d) {
+		var inverse = document.createElement('input');
+		inverse.type = "checkbox";
+		inverse.checked = d.data.inverse;
+		inverse.onchange = function() {
+			d.data.inverse = inverse.checked;
+			document.fn_reprocess();
+		}
+		d.container.appendChild(inverse);
+		var s = document.createElement('span');
+		s.textContent = 'Encrypt';
+		d.container.appendChild(s);
+	}
+
 	exports.input = {
 		create: function(d) { // returns 'data' object
 			return {
@@ -84,7 +99,95 @@ define(function(require, exports, module) {
 			}
 			d.output = d.input;
 		}
-	};	
+	};
+	exports.grid_pattern = {
+		create: function(d) { // returns 'data' object
+			return {
+				mode: "RowFlipOdd"
+			}
+		},
+		make_ui: function(d) {
+
+			var selectList = document.createElement("select");
+			var opts = {
+				"RowFlipOdd"  : "Reverse odd rows",
+				"HorizMirror" : "Mirror horizontally"
+			};
+			var cont = [];
+			for (var x in opts) {
+				var k = document.createElement('option');
+				k.value = x;
+				k.text = opts[x];
+				cont.push(x);
+				if (d.data.mode == x)				
+					k.selected = true;
+					selectList.appendChild(k);
+			}
+			selectList.onchange = function() {
+				d.data.mode = cont[selectList.selectedIndex];
+				document.fn_reprocess();
+			}			
+			d.container.appendChild(selectList);			
+			add_inverse_ui(d);
+		},
+		title: "Grid Pattern",
+		process: function(d) {			
+			var output = [];
+			if (d.grid && d.grid.width > 1) {
+				var perm = [];
+				switch (d.data.mode) {
+					case "RowFlipOdd": {
+						var idx = 0;
+						var row = 0;
+						while (perm.length < d.input.length) {							
+							for (var x=0;x<d.grid.width;x++) {
+								if ((row%2) == 0)
+									perm.push(row*d.grid.width + x);
+								else
+									perm.push((row+1)*d.grid.width - x - 1);
+							}
+							++row;
+						}
+						break;
+					}
+					case "HorizMirror": {
+						var idx = 0;
+						var row = 0;
+						while (perm.length < d.input.length) {							
+							for (var x=0;x<d.grid.width;x++) {
+								perm.push((row+1)*d.grid.width - x - 1);
+							}
+							++row;
+						}
+						break;
+					}					
+				}
+				if (d.data.inverse) {
+					// regular
+					var output = new Array(d.input);
+					for (var i=0;i<d.input.length;i++) {
+						var s = perm[i];
+						if (s < d.input.length)
+							output[s] = d.input[i];
+						else
+							output.push(-1);
+					}
+				} else {
+					// regular
+					for (var i=0;i<perm.length;i++) {
+						var s = perm[i];
+						if (s < d.input.length)
+							output.push(d.input[s]);
+						else
+							output.push(-1);
+					}
+				}
+				d.output = output;
+			} else {
+				d.output = d.input;
+			}
+		}
+	};
 	exports.pair_up = {
 		create: function() { return {}; },
 		process: function(d) {
@@ -238,20 +341,10 @@ define(function(require, exports, module) {
 				d.data.keyword = fixed.value;
 				document.fn_reprocess();
 			}
+
 			d.container.appendChild(fixed);
-			var inverse = document.createElement('input');
-			inverse.type = "checkbox";
-			inverse.checked = d.data.inverse;
-			inverse.onchange = function() {
-				d.data.inverse = inverse.checked;
-				document.fn_reprocess();
-			}
-			d.container.appendChild(inverse);
 
-			var s = document.createElement('span');
-			s.textContent = 'Inverse';
-			d.container.appendChild(s);
-
+			add_inverse_ui(d);
 
 			var double = document.createElement('input');
 			double.type = "checkbox";
@@ -322,7 +415,8 @@ define(function(require, exports, module) {
 	exports.polybius = {
 		create: function() { 
 			return {
-				box: "ABCDEFGHIKLMNOPQRSTUVWXYZ"
+				box: "ABCDEFGHIKLMNOPQRSTUVWXYZ",
+				inverse: false
 			}; 
 		},
 		process: function(d) {
@@ -345,17 +439,36 @@ define(function(require, exports, module) {
 					real[i] = left.charAt(c++);
 				}
 			}
-			for (var i=0;i<d.input.length;i++) {
-				var a = Math.floor(d.input[i] / 10);
-				var b = d.input[i] % 10;
-				var y = (a-1) % 5;
-				var x = (b-1) % 5;
-				var c = y*5+x;
-				if (c >= 0 && c < 25) {
-					indices.push(c);
-					out.push(real[c]);
+			if (!d.data.inverse) {
+				for (var i=0;i<d.input.length;i++) {
+					var a = Math.floor(d.input[i] / 10);
+					var b = d.input[i] % 10;
+					var y = (a-1) % 5;
+					var x = (b-1) % 5;
+					var c = y*5+x;
+					if (c >= 0 && c < 25) {
+						indices.push(c);
+						out.push(real[c]);
+					}
 				}
+			} else {
+				// encrypt
+				for (var i=0;i<d.input.length;i++) {					
+					var c;
+					if (typeof d.input == 'string') 
+						c = d.input.charAt(i);
+					else
+						c = d.input[i];
+					var k = real.indexOf(c);
+					if (k != -1) {
+						out.push(1+Math.floor(k / 5));
+						out.push(1+(k % 5));
+						indices.push(k);
+					}				
+				}
+				if (d.grid) d.grid.width = d.grid.width * 2;
 			}
+
 			if (d.ui) {
 				var root = d.ui;
 				while (root.childNodes.length > 0) {
@@ -391,6 +504,7 @@ define(function(require, exports, module) {
 			d.output = out;
 		},
 		make_ui: function(d) {
+			
 			var fixed = document.createElement('input');
 			fixed.value = d.data.box;
 			fixed.style.width = "300px";
@@ -402,8 +516,23 @@ define(function(require, exports, module) {
 				document.fn_reprocess();
 			}
 			d.container.appendChild(fixed);
+
+			var inverse = document.createElement('input');
+			inverse.type = "checkbox";
+			inverse.checked = d.data.inverse;
+			inverse.onchange = function() {
+				d.data.inverse = inverse.checked;
+				document.fn_reprocess();
+			}
+			d.container.appendChild(inverse);
+
+			var s = document.createElement('span');
+			s.textContent = 'Encrypt';
+			d.container.appendChild(s);
+
 			var ta = document.createElement('x-grid');
 			d.container.appendChild(ta);
+			
 			return ta;
 		},
 		title: "Polybius",

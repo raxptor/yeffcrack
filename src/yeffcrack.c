@@ -21,7 +21,7 @@ int user_chosen_scoring(const char* buf, int length)
 	int diff;
 	switch (scoring) {
 		case 0: 
-			return score_freq(buf, length) + trigram_score_buf(buf, length);
+			return trigram_score_buf(buf, length);
 		case 1:
 			diff = (compute_ic(buf, length) - ENGLISH_IC);
 			return 1000000000 - diff * diff;

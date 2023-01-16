@@ -240,9 +240,8 @@ define(function(require, exports, module) {
 		lines.push("unsigned char* cur_out = run->tmp0;");
 		lines.push("int cur_out_len;");
 		lines.push("");
-		var d = {
-			input: input
-		}
+		var d = process_result_d;
+		d.input = input;
 		var bs = 0;		
 		for (var c=start;c<cracks.length;c++) {
 			if (!cracks[c].enabled)
@@ -310,7 +309,7 @@ define(function(require, exports, module) {
 				if (d.error)
 					console.log(d.error);
 				//console.log(cracks[i].type, "outputed", d.output);
-				if (!got_crack_step && cracks[i].cls.crack_step) {
+				if (!got_crack_step && (cracks[i].cls.crack_step || (i == cracks.length-1))) {
 					input_at_step = i;
 					input_data = d.input;
 					console.log("Actual input happens at step ", input_at_step, " with data ", d.input);

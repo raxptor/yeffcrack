@@ -174,6 +174,12 @@ void hillclimb()
 		hillclimb_single(cur, user_chosen_scoring, 0xfffff, 2, 1000, &rnd);
 		*/
 		hillclimb_single(cur, user_chosen_scoring, 0xfffff, 1, 500, &rnd);
+		if (rand()%100 == 0) {
+			algo_reset_data rd;
+			memset(&rd, 0x00, sizeof(rd));
+			rd.polybius = "CREDNWTABFGHIKLMOPQSUVXYZ";
+			algo_reset(cur, &rd);
+		}
 		int score = algo_score(cur, user_chosen_scoring, 0);
 		if (score > best_ever) {
 			printf("Score: %d ", score);
