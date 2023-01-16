@@ -20,6 +20,8 @@ int score(const char* buf, int length);
 void source_polybius(char *buf, MTRand *rand);
 void source_transposition(char *buf, int len, MTRand *rand);
 
+void permutation_walk(char* perm, MTRand* rand, int len);
+
 void hillclimb();
 
 #define RNDWALK_POLYBIUS            1
