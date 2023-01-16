@@ -158,7 +158,7 @@ define(function(require, exports, module) {
 		lines.push("#include <memory.h>");
 		lines.push("#include <stdio.h>");
 		lines.push("#include <string.h>");		
-		lines.push("#include \"mtwister.h\"");
+		lines.push("#include \"all.h\"");
 		lines.push("void permutation_walk(char* p, MTRand* rand, int len);");
 		lines.push("const char* word_get_random(int length, MTRand* rand);");
 		lines.push("int score(const char* buf, int length);");

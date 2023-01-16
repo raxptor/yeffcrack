@@ -3,6 +3,7 @@
 - Kommandoradsalternativ för att testa alla permutationer från topp till botten från en fil
 - Kommandoradsalternativ för att bestämma scoring
 	Lägg in CI för att kunna knäcka därifrån
+- Pattern LRLRLR etc
 
 Command line options 
 	--walk=coltrans,polybius
