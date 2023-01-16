@@ -5,8 +5,9 @@ define(function(require, exports, module) {
 			d.lines.push(`\tchar ${d.prefix}_map[25];`);
 		},
 		initial_guess: function(d) {
+			subst = all_mods.polybius.make_polyb_subst(d);
 			d.lines.push(`
-				const char* def = "ABCDEFGHIKLMNOPQRSTUVWXYZ";
+				const char* def = "${subst.join('')}";
 				for (int i = 0; i < 25; i++) {
 					inst->${d.prefix}_map[i] = def[i];
 				}
@@ -30,7 +31,7 @@ define(function(require, exports, module) {
 				for (int i = 0; i < cur_in_len; i++) {
 					const char y = cur_in[i] >> 4;
 					const char x = cur_in[i] & 0xf;
-					cur_out[i] = inst->${d.prefix}_map[(y-1) * 5 + (x-1)];
+					cur_out[i] = inst->${d.prefix}_map[((y-1)%5) * 5 + ((x-1)%5)];
 				}
 				cur_out_len = cur_in_len;
 			`);
@@ -101,16 +102,18 @@ define(function(require, exports, module) {
 			var gw = d.process_d.grid.width;
 			var height = Math.floor((d.process_d.input.length + d.process_d.grid.width - 1)/(d.process_d.grid.width));
 			d.lines.push(`
-				int tp_out = 0;
-				for (int x=0;x<${gw};x++)
-				{
-					for (int y=0;y<${height};y++)
+				{ 
+					int tp_out = 0;
+					for (int x=0;x<${gw};x++)
 					{
-						int idx = y * ${gw} + x;
-						if (idx < cur_in_len)
-							cur_out[tp_out++] = cur_in[idx];
-						else
-							cur_out[tp_out++] = -1;
+						for (int y=0;y<${height};y++)
+						{
+							int idx = y * ${gw} + x;
+							if (idx < cur_in_len)
+								cur_out[tp_out++] = cur_in[idx];
+							else
+								cur_out[tp_out++] = -1;
+						}
 					}
 				}
 			`);
@@ -137,8 +140,9 @@ define(function(require, exports, module) {
 					if (s < len)
 						d.lines.push(`cur_out[${i}] = cur_in[${s}];`);
 					else
-						d.lines.push(`cur_out[${i}] = 0;`);							
+						d.lines.push(`cur_out[${i}] = 0;`);
 				}
+				d.lines.push(`cur_out_len = ${perm.length};`);
 			}
 		}
 	}

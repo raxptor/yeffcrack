@@ -1,6 +1,6 @@
 define(function(require, exports, module) {
 
-	exports.modules_for_add = ['input_text', 'make_grid', 'pair_up', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp'];
+	exports.modules_for_add = ['input', 'input_text', 'make_grid', 'bifid', 'pair_up', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'stats'];
 
 	function add_inverse_ui(d) {
 		var inverse = document.createElement('input');
@@ -34,7 +34,6 @@ define(function(require, exports, module) {
 			return ta;
 		},
 		title: "Input - numbers (ignore space)",
-		prevent_delete: true,
 		process: function(d) {
 			console.log("process", d);
 			var txt = d.data.text;
@@ -69,7 +68,6 @@ define(function(require, exports, module) {
 			return ta;
 		},
 		title: "Input - text",
-		prevent_delete: true,
 		process: function(d) {
 			d.output = d.data.text;
 		},
@@ -101,8 +99,9 @@ define(function(require, exports, module) {
 		}
 	};
 
-	function make_pattern_perm(d) {
+	function make_pattern_perm(d, update_d_grid_size) {
 		var perm = [];
+		var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
 		switch (d.data.mode) {
 			case "RowFlipOdd": {
 				var idx = 0;
@@ -121,14 +120,26 @@ define(function(require, exports, module) {
 			case "HorizMirror": {
 				var idx = 0;
 				var row = 0;
-				while (perm.length < d.input.length) {							
+				while (perm.length < d.input.length) {
 					for (var x=0;x<d.grid.width;x++) {
 						perm.push((row+1)*d.grid.width - x - 1);
 					}
 					++row;
 				}
 				break;
-			}					
+			}	
+			case "RmColR": {
+				var idx = 0;
+				for (var y=0;y<height;y++) {
+					for (var x=0;x<d.grid.width-1;x++) {
+						perm.push(y*d.grid.width + x);
+					}
+				}
+				if (update_d_grid_size)
+					d.grid.width = d.grid.width - 1;
+				break;
+			}
+
 		}
 		return perm;
 	}
@@ -145,7 +156,8 @@ define(function(require, exports, module) {
 			var selectList = document.createElement("select");
 			var opts = {
 				"RowFlipOdd"  : "Reverse odd rows",
-				"HorizMirror" : "Mirror horizontally"
+				"HorizMirror" : "Mirror horizontally",
+				"RmColR"      : "Remove rightmost column"
 			};
 			var cont = [];
 			for (var x in opts) {
@@ -165,14 +177,16 @@ define(function(require, exports, module) {
 			add_inverse_ui(d);
 		},
 		title: "Grid Pattern",
-		process: function(d) {			
+		process: function(d) {
 			var output = [];
 			if (d.grid && d.grid.width > 1) {
-				var perm = make_pattern_perm(d);
+				var perm = make_pattern_perm(d, true);
 				if (d.data.inverse) {
 					// regular
 					var output = new Array(d.input);
 					for (var i=0;i<d.input.length;i++) {
+						if (i >= perm.length)
+							continue
 						var s = perm[i];
 						if (s < d.input.length)
 							output[s] = d.input[i];
@@ -197,7 +211,7 @@ define(function(require, exports, module) {
 	};
 	exports.pair_up = {
 		create: function() { return {}; },
-		process: function(d) {
+		process: function(d) {			
 			if ((d.input.length % 2) != 0) {
 				d.error = "Length not divisible by 2... " + d.input.length;
 				d.output = [];
@@ -220,6 +234,30 @@ define(function(require, exports, module) {
 		},
 		title: "PairUp"
 	};
+	exports.bifid = {
+		create: function() { return {}; },
+		process: function(d) {
+			if ((d.input.length % 2) != 0) {
+				d.error = "Length not divisible by 2... " + d.input.length;
+				d.output = [];
+			} else {
+				var output = new Array(d.input.length/2);
+				var j = 0;
+				for (var i=0;i<d.input.length;i+=2) {
+					output[j++] = d.input[i];
+				}
+				for (var i=0;i<d.input.length;i+=2) {
+					output[j++] = d.input[i+1];
+				}
+				d.output = output;
+			}
+			return d.input;
+		},
+		make_ui: function(root) {
+			
+		},
+		title: "BIFID"
+	};	
 	exports.remove_characters = {
 		create: function() { return {
 			always_nulls: ""
@@ -264,6 +302,52 @@ define(function(require, exports, module) {
 		title: "Output",
 		prevent_delete: true
 	};
+	exports.stats = {
+		create: function() { return {}; },
+		process: function(d) {
+			if (d.ui) {
+				var txt;
+				var counts = {};
+				if (typeof d.input == "string") {
+					for (var x in d.input) {
+						var c = d.input.charAt(x);
+						if (!counts[c])
+							counts[c] = 1;
+						else
+							counts[c] = counts[c]+1;
+					}
+				}
+				else {
+					for (var x in d.input) {
+						var c = d.input[x];
+						if (!counts[c])
+							counts[c] = 1;
+						else
+							counts[c] = counts[c]+1;
+					}
+				}
+				console.log("Counts are", counts);
+				var u=0, n=0;
+				for (var k in counts) {
+					u += counts[k] * (counts[k]-1);
+					n += counts[k];
+				}
+				console.log(u, n);
+				var ic = 10000 * u/(n*(n-1));
+				d.ui.innerHTML = `<div>N = ${n}</div><span>IC = ${ic.toFixed(1)} (en=686)</span>`;
+				
+ 			}
+			d.output = d.input;
+		},
+		make_ui: function(d) {
+			var icdiv = document.createElement('div');
+			var ta = document.createElement('textarea');
+			ta.textContent = "";
+			d.container.appendChild(icdiv);
+			return icdiv;
+		},
+		title: "Statistics",
+	};
 	exports.transpose = {
 		create: function() { 
 			return {}; 
@@ -302,10 +386,13 @@ define(function(require, exports, module) {
 		order.sort(function(a,b){return a.value - b.value});
 		if (!d.data.inverse) {
 			var o = [];
+			console.log("AAAA",order);
 			for (var i=0;i<order.length;i++)
 				o[order[i].index] = { index: i };
 			order = o;
+			console.log("inverting to ", o);
 		}
+		console.log("final order", order, " inv=", d.data.inverse);
 		return order;
 	};
 
@@ -419,6 +506,25 @@ define(function(require, exports, module) {
 		},
 		title: "CutHalfTB"
 	};	
+	function make_polyb_subst(d) {
+		var real = new Array(25);
+		var left = "ABCDEFGHIKLMNOPQRSTUVWXYZ";
+		var inp = d.data.box;
+		for (var i=0;i<25;i++) {
+			var c = inp.charAt(i);
+			if (c != '?') {
+				real[i] = c;
+				left = left.replace(c, '');
+			}
+		}
+		var c = 0;
+		for (var i=0;i<25;i++) {
+			if (inp.charAt(i) == '?') {
+				real[i] = left.charAt(c++);
+			}
+		}
+		return real;
+	}
 	exports.polybius = {
 		create: function() { 
 			return {
@@ -426,26 +532,11 @@ define(function(require, exports, module) {
 				inverse: false
 			}; 
 		},
+		make_polyb_subst: make_polyb_subst,
 		process: function(d) {
 			var out = [];
 			var indices = [];
-
-			var real = new Array(25);
-			var left = "ABCDEFGHIKLMNOPQRSTUVWXYZ";
-			var inp = d.data.box;
-			for (var i=0;i<25;i++) {
-				var c = inp.charAt(i);
-				if (c != '?') {
-					real[i] = c;
-					left = left.replace(c, '');
-				}
-			}
-			var c = 0;
-			for (var i=0;i<25;i++) {
-				if (inp.charAt(i) == '?') {
-					real[i] = left.charAt(c++);
-				}
-			}
+			var real = make_polyb_subst(d);
 			if (!d.data.inverse) {
 				for (var i=0;i<d.input.length;i++) {
 					var a = Math.floor(d.input[i] / 10);
@@ -460,7 +551,7 @@ define(function(require, exports, module) {
 				}
 			} else {
 				// encrypt
-				for (var i=0;i<d.input.length;i++) {					
+				for (var i=0;i<d.input.length;i++) {
 					var c;
 					if (typeof d.input == 'string') 
 						c = d.input.charAt(i);

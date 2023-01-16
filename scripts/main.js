@@ -106,13 +106,13 @@ define(function(require, exports, module) {
 				container: el_content,
 				data: ck.data
 			}));
-			root.appendChild(el_crack);
 			var cont = document.createElement('x-buttons');
 			(function(x) {
-				if (x != (cks.length-1))
-					cont.appendChild(mk_insert_button(cks, Number(x)+1));
+				if (Number(x) > 0 || !cks[0].type.startsWith('input'))
+				cont.appendChild(mk_insert_button(cks, Number(x)));
 			})(x);
 			root.appendChild(cont);
+			root.appendChild(el_crack);
 		}
 		return uis;
 	}
@@ -293,7 +293,7 @@ define(function(require, exports, module) {
 	}
 
 	function process_cracks(cracks, uis) {
-		var d = { };
+		var d = { input: "" };
 		var input_at_step = 1;
 		var input_data = "";
 		var got_crack_step = false;
@@ -328,7 +328,7 @@ define(function(require, exports, module) {
 	
 	exports.startup = function() {
 		/* 'make_grid', 'transpose', 'pair_up', 'transpose', 'cut_half', 'polybius', 'grid_view', */
-		var cracks = deserialize(location.hash) || create_default_instances(['input', 'remove_characters', 'output']);
+		var cracks = deserialize(location.hash) || create_default_instances(['input', 'output']);
 		var uis;
 		document.fn_rebuild = function() {
 			console.log("Reload!");
