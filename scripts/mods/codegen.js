@@ -115,6 +115,32 @@ define(function(require, exports, module) {
 				}
 			`);
 		},
+	};
+
+	exports.grid_pattern = {
+		write: function(d) {
+			var len = d.process_d.input.length;
+			var perm = all_mods.grid_pattern.make_pattern_perm(d.process_d);
+			if (d.data.inverse) {
+				var output = new Array(d.input);
+				for (var i=0;i<len;i++) {
+					var s = perm[i];
+					if (s < len)
+						d.lines.push(`cur_out[${s}] = cur_in[${i}];`);
+					else
+						d.lines.push(`cur_out[${s}] = 0;`);
+				}
+			} else {
+				// regular
+				for (var i=0;i<len;i++) {
+					var s = perm[i];
+					if (s < len)
+						d.lines.push(`cur_out[${i}] = cur_in[${s}];`);
+					else
+						d.lines.push(`cur_out[${i}] = 0;`);							
+				}
+			}
+		}
 	}
 
 	exports.pair_up = {

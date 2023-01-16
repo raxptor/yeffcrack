@@ -238,7 +238,7 @@ define(function(require, exports, module) {
 		lines.push("const unsigned char* cur_in = input;");
 		lines.push("int cur_in_len = input_len;");
 		lines.push("unsigned char* cur_out = run->tmp0;");
-		lines.push("int cur_out_len;");
+		lines.push("int cur_out_len = input_len;");
 		lines.push("");
 		var d = process_result_d;
 		d.input = input;
@@ -246,6 +246,7 @@ define(function(require, exports, module) {
 		for (var c=start;c<cracks.length;c++) {
 			if (!cracks[c].enabled)
 				continue;
+			d.data = cracks[c].data;
 			lines.push("// " + cracks[c].cls.title);
 			var gen = codegen[cracks[c].type];
 			if (gen && gen.write) {
@@ -258,9 +259,7 @@ define(function(require, exports, module) {
 				lines.push("cur_in_len = cur_out_len;");
 				lines.push("cur_in = cur_out;");
 				lines.push("cur_out = run->tmp" + ((++bs)%2) + ";");
-				lines.push("");
 			}
-			d.data = cracks[c].data;
 			cracks[c].cls.process(d);
 			d.input = d.output;
 		}
@@ -317,6 +316,7 @@ define(function(require, exports, module) {
 				}
 				d.input = d.output;
 			} catch (e) {
+				console.error(e);
 				return false;
 			}
 		}

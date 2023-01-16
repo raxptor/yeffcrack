@@ -100,12 +100,46 @@ define(function(require, exports, module) {
 			d.output = d.input;
 		}
 	};
+
+	function make_pattern_perm(d) {
+		var perm = [];
+		switch (d.data.mode) {
+			case "RowFlipOdd": {
+				var idx = 0;
+				var row = 0;
+				while (perm.length < d.input.length) {							
+					for (var x=0;x<d.grid.width;x++) {
+						if ((row%2) == 0)
+							perm.push(row*d.grid.width + x);
+						else
+							perm.push((row+1)*d.grid.width - x - 1);
+					}
+					++row;
+				}
+				break;
+			}
+			case "HorizMirror": {
+				var idx = 0;
+				var row = 0;
+				while (perm.length < d.input.length) {							
+					for (var x=0;x<d.grid.width;x++) {
+						perm.push((row+1)*d.grid.width - x - 1);
+					}
+					++row;
+				}
+				break;
+			}					
+		}
+		return perm;
+	}
+	
 	exports.grid_pattern = {
 		create: function(d) { // returns 'data' object
 			return {
 				mode: "RowFlipOdd"
 			}
 		},
+		make_pattern_perm: make_pattern_perm,
 		make_ui: function(d) {
 
 			var selectList = document.createElement("select");
@@ -134,34 +168,7 @@ define(function(require, exports, module) {
 		process: function(d) {			
 			var output = [];
 			if (d.grid && d.grid.width > 1) {
-				var perm = [];
-				switch (d.data.mode) {
-					case "RowFlipOdd": {
-						var idx = 0;
-						var row = 0;
-						while (perm.length < d.input.length) {							
-							for (var x=0;x<d.grid.width;x++) {
-								if ((row%2) == 0)
-									perm.push(row*d.grid.width + x);
-								else
-									perm.push((row+1)*d.grid.width - x - 1);
-							}
-							++row;
-						}
-						break;
-					}
-					case "HorizMirror": {
-						var idx = 0;
-						var row = 0;
-						while (perm.length < d.input.length) {							
-							for (var x=0;x<d.grid.width;x++) {
-								perm.push((row+1)*d.grid.width - x - 1);
-							}
-							++row;
-						}
-						break;
-					}					
-				}
+				var perm = make_pattern_perm(d);
 				if (d.data.inverse) {
 					// regular
 					var output = new Array(d.input);
