@@ -1,4 +1,11 @@
+#include <memory.h>
 #include "all.h"
+
+void permutation_reset(char* p, int len, char base)
+{
+	for (int i = 0; i < len; i++)
+		p[i] = base + i;
+}
 
 void permutation_walk(char* perm, MTRand* rand, int len)
 {

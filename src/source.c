@@ -1,5 +1,7 @@
+#include <stdlib.h>
+#include <memory.h>
+#include <string.h>
 #include "all.h"
-
 
 void source_polybius(char *buf, MTRand *rand)
 {
@@ -25,7 +27,7 @@ void source_polybius(char *buf, MTRand *rand)
 	}
 }
 
-void source_transposition(char *buf, int len, MTRand *rand)
+void source_coltransp(char *buf, int len, MTRand *rand)
 {
 	for (int i = 0; i < len; i++)
 		buf[i] = i;

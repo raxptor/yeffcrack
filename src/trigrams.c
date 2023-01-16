@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 
 struct TrigramInput {
 	const char *txt;
@@ -17568,25 +17569,30 @@ static const TrigramInput_t RAW[] = {
 
 int table[32 * 32 * 32];
 
+int index_trigram(const char *t)
+{
+	int a = t[0] - 'A';
+	int b = t[1] - 'A';
+	int c = t[2] - 'A';
+	return a * 32 * 32 + b * 32 + c;
+}
+
+int score_trigram(const char *t)
+{
+	return table[index_trigram(t)];
+}
+
 void trigram_init()
 {
 	int count = sizeof(RAW) / sizeof(TrigramInput_t);
 	for (int i = 0; i < count; i++)
 	{
-		char a = RAW[i].txt[0] - 'A';
-		char b = RAW[i].txt[1] - 'A';
-		char c = RAW[i].txt[2] - 'A';
-		table[a * 32 * 32 + b * 32 + c] = RAW[i].value;
+		int a = RAW[i].txt[0] - 'A';
+		int b = RAW[i].txt[1] - 'A';
+		int c = RAW[i].txt[2] - 'A';
+		table[a * 32 * 32 + b * 32 + c] = (int)(100000.0 * log(RAW[i].value));
 	}
-	printf("Initialized trigrams with %d entries\n", count);
-}
-
-int score_trigram(const char *t)
-{
-	char a = t[0] - 'A'; if (a == 'j') a = 'i';
-	char b = t[1] - 'A'; if (b == 'j') b = 'i';
-	char c = t[2] - 'A'; if (c == 'j') c = 'i';
-	return table[a * 32 * 32 + b * 32 + c];
+	printf("Initialized trigrams with %d entries max=%d\n", count, score_trigram("THE"));
 }
 
 int trigram_score_buf(const char *t, int length)

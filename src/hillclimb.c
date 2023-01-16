@@ -17,145 +17,193 @@ int cmp_score(const void *va, const void *vb)
 	return a < b ? 1 : a > b ? -1 : 0;
 }
 
-int new_crack(void *p, MTRand* rand)
+int frac_transp_stage_score(const char* buf, int length)
 {
-	int best = -1;
-	for (int i = 0; i < 100; i++)
-	{
-		algo_initial_guess(buf, 1, rand);
-		int score = algo_score(buf, 0);
-		if (score >= best) {
+	int diff = (compute_ic(buf, length) - ENGLISH_IC);
+	return 1000000000 - diff * diff;
+}
+
+int frac_polybius_stage_score(const char* buf, int length)
+{
+	return 1000000000 + score_freq(buf, length);
+}
+
+int new_crack(void *p, t_score_fn scoring, MTRand* rand)
+{
+	char buf[1024];
+	
+	if (algo_is_fractionated()) {
+		const int frac_rand_starts = 120; // number of random configurations to try out.
+		char gen[1024];
+		int best = -1;
+		for (int i = 0; i < frac_rand_starts; i++) {
+			algo_initial_guess(gen, 0, rand); // NOTE: This also randomises everything else, might not be necessary.
+			int score = algo_score(gen, scoring, 0);
+			if (!i || score >= best) {
+				best = score;
+				memcpy(p, gen, algo_size());
+			}
+		}
+		return best;
+	} else {
+		const int random_starts = 120; // number of random configurations to try out.
+		int best = -1;
+		for (int i = 0; i < random_starts; i++)
+		{
+			algo_initial_guess(buf, 1, rand);
+			int score = algo_score(buf, &user_chosen_scoring, 0);
+			if (!i || score >= best) {
+				best = score;
+				memcpy(p, buf, algo_size());
+			}
+		}
+		return best;
+	}	
+}
+
+void hillclimb_single(char* cur, t_score_fn scoring, int mask, int step_size, int max_iterations, MTRand* rnd)
+{
+	int best = scoring(cur, algo_size());
+	int since_improv = 0;
+	while (since_improv < max_iterations) {
+		char tmp[256];
+		memcpy(tmp, cur, algo_size());
+		for (int i=0;i<step_size;i++)
+			algo_random_walk(tmp, mask, rnd);
+		int score = algo_score(tmp, scoring, 0);
+		if (score > best) {
 			best = score;
-			memcpy(p, buf, algo_size());
+			memcpy(cur, tmp, algo_size());
+			since_improv = 0;
+		}
+		else {
+			since_improv++;
 		}
 	}
-	return best;
+}
+
+typedef struct FreqEntry_t {
+	int index;
+	int count;
+} FreqEntry;
+
+int cmp_freqs(const void *va, const void *vb)
+{
+	long a = ((FreqEntry *)va)->count, b = ((FreqEntry *)vb)->count;
+	return a < b ? 1 : a > b ? -1 : 0;
+}
+
+void make_freq_polybius(void* ptr)
+{
+	// make ABCDEF... 
+	char rpoly[25];
+	permutation_reset(rpoly, 25, 'A');
+	algo_reset_data rd;
+	memset(&rd, 0x00, sizeof(rd));
+	rd.polybius = rpoly;
+	algo_reset(ptr, &rd);
+
+	char tmp0[1024];
+	char tmp1[1024];
+	algo_run_data run;
+	run.crack = ptr;
+	run.tmp0 = tmp0;
+	run.tmp1 = tmp1;
+	algo_run(&run, 0);
+
+	FreqEntry freqs[25];
+	for (int i = 0; i < 25; i++) {
+		freqs[i].count = 0;
+		freqs[i].index = i;
+	}
+	for (int i = 0; i < run.length; i++) {
+		unsigned char c = run.output[i] - 'A';
+		if (c < 25) {
+			freqs[c].count++;
+		}
+	}
+	qsort(freqs, 25, sizeof(FreqEntry), cmp_freqs);
+	char polybius[25];
+	const char* order = "ETAINOSHRDLUCMFWYGPBVKQXZ";
+	for (int i = 0; i < 25; i++) {
+		polybius[freqs[i].index] = order[i];
+	}
+	rd.polybius = polybius;
+	algo_reset(ptr, &rd);
 }
 
 void hillclimb()
 {
-	MTRand rnd = seedRand(0x8fe2d2c0);
-	const int total = 500;
-	const int size = algo_size();
-	void* crack_cur[1024];
-	void* crack_best[1024];
+	MTRand rnd = seedRand(0x8fe2d2c0 + time(0));
 
-	int best[1024];
+	#define TOPLIST_SIZE 10
+	#define TOPLIST_SORTER 200
+	#define TOPLIST_ENTRIES (TOPLIST_SIZE+TOPLIST_SORTER)
+	const int toplist_tot = TOPLIST_ENTRIES;
+	void* crack_toplist[TOPLIST_ENTRIES];
+	int score_toplist[TOPLIST_ENTRIES];
+	SortEntry toplist_se[TOPLIST_ENTRIES];
 
-	for (int i = 0; i < total; i++)
-	{
-		crack_cur[i] = malloc(size);
-		crack_best[i] = malloc(size);
-		new_crack(crack_cur[i], &rnd);
-		memcpy(crack_best[i], crack_cur[i], size);
-		best[i] = score(crack_cur[i], 0);
-	}
+	for (int i = 0; i < toplist_tot; i++)
+		crack_toplist[i] = malloc(algo_size());
+	for (int i = 0; i < toplist_tot; i++)
+		toplist_se[i].index = i;
+	
+	int best_ever = INT_MIN;
 
-	const int step_iter = 500;
-	const int perc_chance_same_venture = 30;
-	const int perc_chance_new_venture = 100;
-	const int old_venture_step_count = 30;
+	int writeptr = 0;
 
-	char* tmp = malloc(algo_size());
-	int looper = 0;
-	int printerval = 0;
-	int switch_mode = 0;
+
+	int print_ratio = 4;
+	int topiter = 99999;
 	while (1)
 	{
-		if (looper == total) looper = 0;
-
-		if (++switch_mode == 8000) {
-			// re-score.
-			for (int i = 0; i < total; i++) {
-				best[i] = algo_score(crack_best[i], 0);
-			}
-			switch_mode = 0;
+		// Hill climb a new entry.
+		char cur[256];
+		if (algo_is_fractionated() && 1) {
+			new_crack(cur, frac_transp_stage_score, &rnd);
+			hillclimb_single(cur, frac_transp_stage_score, RNDWALK_TRANSPOSITION, 1, 2000, &rnd);
+			make_freq_polybius(cur);
+		} else {
+			new_crack(cur, user_chosen_scoring, &rnd);
 		}
+		
+		//make_freq_polybius(cur);
+		/*hillclimb_single(cur, user_chosen_scoring, 0xfffff, 4, 1000, &rnd);
+		hillclimb_single(cur, user_chosen_scoring, 0xfffff, 3, 1000, &rnd);
+		hillclimb_single(cur, user_chosen_scoring, 0xfffff, 2, 1000, &rnd);
+		*/
+		hillclimb_single(cur, user_chosen_scoring, 0xfffff, 1, 500, &rnd);
+		int score = algo_score(cur, user_chosen_scoring, 0);
+		if (score > best_ever) {
+			printf("Score: %d ", score);
+			algo_score(cur, user_chosen_scoring, 1);
+			best_ever = score;
+		}
+		int windex = toplist_se[writeptr].index;
+		memcpy(crack_toplist[windex], cur, algo_size());
+		score_toplist[windex] = score;
 
+		++writeptr;
+		if (writeptr == toplist_tot) {
 
-		if (printerval > 2000000) {
-			printerval = 0;
-
-			SortEntry scores[1024];
-			for (int i = 0; i < total; i++) {
-				scores[i].index = i;
-				scores[i].score = best[i];
+			for (int i = 0; i < toplist_tot; i++)
+			{
+				toplist_se[i].score = score_toplist[i];
+				toplist_se[i].index = i;
 			}
+			qsort(toplist_se, toplist_tot, sizeof(SortEntry), cmp_score);
+			writeptr = TOPLIST_SIZE;
 
-			qsort(scores, total, sizeof(SortEntry), cmp_score);
-
-			printf("==== RANKING ====\n");
-			for (int i = 0; i < 10; i++) {
-				printf("%d. %ld:", i, scores[i].score);
-				algo_score(crack_best[scores[i].index], 1);
-			}
-
-			// purge dupes
-			for (int i = 1; i < total; i++) {
-				int i0 = scores[i - 1].index;
-				int i1 = scores[i].index;
-				if (best[i0] == best[i1] || i > total * 4 / 5) {
-					best[i0] = new_crack(crack_best[i0], &rnd);;
-					memcpy(crack_cur[i0], crack_best[i0], algo_size());
+			if (++topiter >= print_ratio) {
+				printf("==== RANKING ====\n");
+				for (int i = 0; i < TOPLIST_SIZE; i++) {
+					printf("%d. %ld:", i, toplist_se[i].score);
+					algo_score(crack_toplist[toplist_se[i].index], &user_chosen_scoring, 1);
 				}
-			}
+				topiter = 0;
+			}			
 		}
 
-		int improvements = 0;
-		int last = algo_score(crack_cur[looper], 0);
-		int mask = 0xfff;
-		for (int step = 0; step < step_iter; step++) {
-			printerval++;
-			memcpy(tmp, crack_cur[looper], size);
-			algo_random_walk(tmp, mask, &rnd);
-			int new_score = algo_score(tmp, 0);
-			if (new_score > last) {
-				memcpy(crack_cur[looper], tmp, size);
-				improvements++;
-				last = new_score;
-				break;
-			}
-			if (new_score > best[looper]) {
-				memcpy(crack_best[looper], tmp, size);
-				best[looper] = new_score;
-			}
-		}
-
-		if (!improvements) {
-			// pick a new starting point
-			if (rand() % 100 < perc_chance_same_venture) {
-				//printf("new venture for %d\n", looper);
-				memcpy(crack_cur[looper], crack_best[looper], size);
-			}
-			else if (rand() % 100 < perc_chance_new_venture) {
-				//printf("new venture for %d\n", looper);
-				new_crack(crack_cur[looper], &rnd);
-			}
-			else {
-				long tot = 0;
-				for (int w = 0; w < total; w++)
-					tot += (best[w] >> 16);
-				long r = genRandLong(&rnd) % tot;
-				int which = 0;
-				for (int w = 0; w < total; w++)
-				{
-					long b = best[w] >> 16;
-					if (r <= b) {
-						which = w;
-						break;
-					}
-					else {
-						r -= b;
-					}
-				}
-				printf("re-venturing %d from point %d\n", looper, which);
-				memcpy(crack_cur[looper], crack_cur[which], size);
-				long mask = genRandLong(&rnd);
-				for (int k = 0; k < old_venture_step_count; k++)
-					algo_random_walk(crack_cur[looper], mask, &rnd);
-			}
-		}
-
-		++looper;
 	}
 }

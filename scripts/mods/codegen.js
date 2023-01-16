@@ -22,6 +22,9 @@ define(function(require, exports, module) {
 		mask_name: function(d) {
 			return 'RNDWALK_POLYBIUS'
 		},
+		reset: function(d) {
+			d.lines.push(`memcpy(inst->${d.prefix}_map, rd->polybius, 25);`);
+		},
 		write: function(d) {
 			d.lines.push(`
 				for (int i = 0; i < cur_in_len; i++) {

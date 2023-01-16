@@ -130,7 +130,7 @@ define(function(require, exports, module) {
 		return cracks;
 	}
 
-	function generate_code(cracks, start, input) {
+	function generate_code(cracks, start, input, process_result_d) {
 		var lines = [];
 		var inp = [];
 		var inp_len;
@@ -178,6 +178,7 @@ define(function(require, exports, module) {
 
 		lines.push("} Algo;");
 		lines.push(`int algo_size() { return sizeof(Algo); }`);
+		lines.push(`int algo_is_fractionated() { return ${process_result_d.is_fractionated ? 1 : 0}; };`);
 		lines.push(`void algo_initial_guess(void* ptr, int as_given, MTRand* rand) {\n\tAlgo* inst = (Algo*)ptr;`);
 		for (var c=start;c<cracks.length;c++) {
 			if (!cracks[c].enabled)
@@ -212,16 +213,31 @@ define(function(require, exports, module) {
 		}
 		lines.push("}");
 
-		lines.push(`int algo_score(void* ptr, int print) {\n\tAlgo* inst = (Algo*)ptr;`);
+		lines.push(`void algo_reset(void* ptr, algo_reset_data* rd) {\n\tAlgo* inst = (Algo*)ptr;`);
+		for (var c=start;c<cracks.length;c++) {
+			if (!cracks[c].enabled)
+				continue;
+			var gen = codegen[cracks[c].type];
+			if (gen && gen.reset) {
+				lines.push("\tif (rd->" + cracks[c].type + ") {");
+				gen.reset({
+					prefix: cracks[c].type + "_" + c,
+					lines: lines,
+					data: cracks[c].data
+				});
+				lines.push("\t}");
+			}
+		}
+		lines.push("}");
+
+		//lines.push(`int algo_score(void* ptr, t_score_fn fn, int print) {\n\tAlgo* inst = (Algo*)ptr;`);
+		lines.push(`void algo_run(algo_run_data* run, int print) { Algo* inst = (Algo*)run->crack;`);
 		lines.push("int input_len = " + inp_len + ";");
 		lines.push("const unsigned char *input = \"" + inp.join('') + "\";");
 		lines.push("");
-		lines.push("unsigned char tmp0[" + (2*inp_len) + "];");
-		lines.push("unsigned char tmp1[" + (2*inp_len) + "];");
-		lines.push("");
 		lines.push("const unsigned char* cur_in = input;");
 		lines.push("int cur_in_len = input_len;");
-		lines.push("unsigned char* cur_out = tmp0;");
+		lines.push("unsigned char* cur_out = run->tmp0;");
 		lines.push("int cur_out_len;");
 		lines.push("");
 		var d = {
@@ -242,7 +258,7 @@ define(function(require, exports, module) {
 				});
 				lines.push("cur_in_len = cur_out_len;");
 				lines.push("cur_in = cur_out;");
-				lines.push("cur_out = tmp" + ((++bs)%2) + ";");
+				lines.push("cur_out = run->tmp" + ((++bs)%2) + ";");
 				lines.push("");
 			}
 			d.data = cracks[c].data;
@@ -272,7 +288,8 @@ define(function(require, exports, module) {
 		lines.push(`
 			printf("\\n");
 		}`);
-		lines.push("return score(cur_in, cur_in_len);");
+		lines.push("	run->output = (char*)cur_in;");
+		lines.push("	run->length = cur_in_len;");
 		lines.push("}");
 		return lines.join("\n").replaceAll("\t\t\t", "");
 	}
@@ -305,7 +322,7 @@ define(function(require, exports, module) {
 			}
 		}
 		if  (uis) {
-			document.getElementById('code').textContent = generate_code(cracks, input_at_step, input_data)
+			document.getElementById('code').textContent = generate_code(cracks, input_at_step, input_data, d)
 		}
 		return true;
 	}

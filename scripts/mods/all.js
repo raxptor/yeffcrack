@@ -101,7 +101,8 @@ define(function(require, exports, module) {
 			}
 			if (d.grid)
 				d.grid.width = d.grid.width / 2;
-			console.log(d.input);
+			if (d.columns_are_random)
+				d.is_fractionated = true;
 			return d.input;
 		},
 		make_ui: function(root) {
@@ -227,6 +228,7 @@ define(function(require, exports, module) {
 				}
 			}
 			d.output = output;
+			d.columns_are_random = true;
 		},
 		make_ui: function(d) {
 			var fixed = document.createElement('input');
