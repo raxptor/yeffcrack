@@ -16,3 +16,11 @@ const char* word_get_random(int length, MTRand* rand);
 void permutation_walk(char* p, MTRand* rand, int len);
 const char* word_get_random(int length, MTRand* rand);
 int score(const char* buf, int length);
+
+void source_polybius(char *buf, MTRand *rand);
+void source_transposition(char *buf, int len, MTRand *rand);
+
+void hillclimb();
+
+#define RNDWALK_POLYBIUS            1
+#define RNDWALK_TRANSPOSITION       2

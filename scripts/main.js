@@ -197,14 +197,17 @@ define(function(require, exports, module) {
 			if (!cracks[c].enabled)
 				continue;
 			var gen = codegen[cracks[c].type];
-			if (gen && gen.initial_guess) {
-				lines.push("if (mask & " + (1 << c) + ") {");
+			if (gen && gen.random_walk) {
+				if (gen.mask_name)
+					lines.push("\tif (mask & " + gen.mask_name() + ") {");
+				else
+					lines.push("\t{");
 				gen.random_walk({
 					prefix: cracks[c].type + "_" + c,
 					lines: lines,
 					data: cracks[c].data
 				});
-				lines.push("}");
+				lines.push("\t}");
 			}
 		}
 		lines.push("}");

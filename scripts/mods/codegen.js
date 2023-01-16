@@ -11,32 +11,17 @@ define(function(require, exports, module) {
 					inst->${d.prefix}_map[i] = def[i];
 				}
 				if (!as_given) {
-					char used[256];
-					memset(inst->${d.prefix}_map, 0x00, 25);
-					memset(used, 0x00, 25);
-					const char *word = word_get_random(0, rand);
-					int p = 0;
-					for (unsigned int i = 0; i < strlen(word); i++) {
-						char c = word[i];
-						if (!used[c-'A']) {
-							inst->${d.prefix}_map[p++] = c;
-							used[c-'A'] = 1;
-						}
-					}
-					for (unsigned int i = 0; i < strlen(def); i++) {
-						char c = def[i];
-						if (!used[c-'A']) {
-							inst->${d.prefix}_map[p++] = c;
-							used[c-'A'] = 1;
-						}
-					}
+					source_polybius(inst->${d.prefix}_map, rand);
 				}`);
 		},
 		random_walk: function(d) {
 			d.lines.push(`
 				permutation_walk(inst->${d.prefix}_map, rand, 25);
 			`);
-		},		
+		},
+		mask_name: function(d) {
+			return 'RNDWALK_POLYBIUS'
+		},
 		write: function(d) {
 			d.lines.push(`
 				for (int i = 0; i < cur_in_len; i++) {
@@ -68,12 +53,7 @@ define(function(require, exports, module) {
 			}
 			d.lines.push(`
 				if (!as_given) {
-					for (int i = 0; i < ${kl}; i++) {
-						int swap = (genRandLong(rand) & 0xff) % (${kl}-i) + i;
-						char t = inst->${d.prefix}_map[i];
-						inst->${d.prefix}_map[i] = inst->${d.prefix}_map[swap];
-						inst->${d.prefix}_map[swap] = t;
-					}
+					source_coltransp(inst->${d.prefix}_map, ${kl}, rand);
 				}`);
 		},
 		random_walk: function(d) {
@@ -83,7 +63,10 @@ define(function(require, exports, module) {
 					permutation_walk(inst->${d.prefix}_map, rand, ${kl});
 				}
 			`);
-		},		
+		},
+		mask_name: function(d) {
+			return 'RNDWALK_TRANSPOSITION'
+		},
 		write: function(d) {
 			var kl = d.data.keyword.length;
 			d.lines.push(`
