@@ -251,8 +251,17 @@ define(function(require, exports, module) {
 			if (d.ui) {
 				if (typeof d.input == "string")
 					d.ui.textContent = d.input;
-				else
-					d.ui.textContent = d.input.join('');
+				else {
+					var tmp = [];
+					for (var i=0;i<d.input.length;i++) {
+						var v = d.input[i];
+						if (typeof v == "number" && v >= 100)
+							tmp.push(String(v).substring(1));
+						else
+							tmp.push(v);
+					}
+					d.ui.textContent = tmp.join('');
+				}
 			}
 		},
 		make_ui: function(d) {
