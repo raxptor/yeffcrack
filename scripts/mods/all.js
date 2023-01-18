@@ -1,6 +1,6 @@
 define(function(require, exports, module) {
 
-	exports.modules_for_add = ['input', 'input_text', 'make_grid', 'bifid', 'pair_up', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'stats'];
+	exports.modules_for_add = ['input', 'input_text', 'make_grid', 'bifid', 'bifid_rows', 'skip_nth', 'pair_up', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'stats'];
 
 	function add_inverse_ui(d) {
 		var inverse = document.createElement('input');
@@ -29,13 +29,11 @@ define(function(require, exports, module) {
 				d.data.text = ta.value;
 				d.fn_reprocess();
 			};
-			console.log(d);
 			d.container.appendChild(ta);
 			return ta;
 		},
 		title: "Input - numbers (ignore space)",
 		process: function(d) {
-			console.log("process", d);
 			var txt = d.data.text;
 			var map = {
 				'0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8':8, '9':9,
@@ -47,7 +45,6 @@ define(function(require, exports, module) {
 				if (r !== undefined)
 					output.push(r);
 			}
-			console.log(map, "=>", output);
 			d.output = output;
 		},
 	};
@@ -82,16 +79,27 @@ define(function(require, exports, module) {
 			var width = document.createElement('input');
 			width.value = d.data.width;
 			d.container.appendChild(width);
+			var sugg = document.createElement('span');
+			d.container.appendChild(sugg);
 			width.onchange = function() {
 				d.data.width = Number(width.value);
 				d.fn_reprocess();
 			};
 			return {
-				width: width
+				width: width,
+				sugg: sugg
 			};
 		},
 		title: "Make Grid",
 		process: function(d) {
+			var s = [];
+			for (var i=2;i<100;i++) {
+				if ((d.input.length % i) == 0)
+					s.push(i);
+			}
+			if (d.ui) {
+				d.ui.sugg.textContent = " Suggested: " + s.join(', ');
+			}
 			d.grid = {
 				width: d.data.width
 			}
@@ -212,18 +220,12 @@ define(function(require, exports, module) {
 	exports.pair_up = {
 		create: function() { return {}; },
 		process: function(d) {			
-			if ((d.input.length % 2) != 0) {
-				d.error = "Length not divisible by 2... " + d.input.length;
-				d.output = [];
-			} else {
-				var output = new Array(d.input.length/2);
-				var j = 0;
-				for (var i=0;i<d.input.length;i+=2) {
-					output[j++] = 100 + d.input[i] * 10 + d.input[i+1];
-				}
-				d.output = output;
+			var output = [];
+			for (var i=0;i<(d.input.length-1);i+=2) {
+				output.push(100 + d.input[i] * 10 + d.input[i+1]);
 			}
-			if (d.grid)
+			d.output = output;
+			if (d.grid && (d.grid.width % 2) == 0)
 				d.grid.width = d.grid.width / 2;
 			if (d.columns_are_random)
 				d.is_fractionated = true;
@@ -241,7 +243,7 @@ define(function(require, exports, module) {
 				d.error = "Length not divisible by 2... " + d.input.length;
 				d.output = [];
 			} else {
-				var output = new Array(d.input.length/2);
+				var output = new Array(d.input.length);
 				var j = 0;
 				for (var i=0;i<d.input.length;i+=2) {
 					output[j++] = d.input[i];
@@ -257,7 +259,63 @@ define(function(require, exports, module) {
 			
 		},
 		title: "BIFID"
-	};	
+	};
+	exports.skip_nth = {
+		create: function() { return {
+			which: 3,
+			offset: 0
+		}; },
+		process: function(d) {
+			var output = [];
+			var j = 0;
+			var which = d.data.which;
+			for (var i=0;i<d.input.length;i++) {
+				if ((i % which) != (which-1))
+					output[j++] = d.input[i];
+			}
+			d.output = output;
+		},
+		make_ui: function(d) {
+			var width = document.createElement('input');
+			width.value = d.data.which;
+			d.container.appendChild(width);
+			width.onchange = function() {
+				d.data.which = Number(width.value);
+				d.fn_reprocess();
+			};
+		},
+		title: "Skip N:th"
+	};
+	exports.bifid_rows = {
+		create: function() { return {}; },
+		process: function(d) {
+			if (d.grid) {
+				var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
+				var output = new Array(d.input.length);
+				var j = 0;
+				// ABCD       AE BF
+				// EFGH   =>  CG DH
+				// IJKL       IM JN
+				// MNOP       KO LP
+				for (var y=0;y<(height-1);y+=2) {
+					var r0 = (y+0) * d.grid.width;
+					var r1 = (y+1) * d.grid.width;
+					for (var x=0;x<d.grid.width;x++) {
+						if (r0+x < d.input.length)
+							output[j++] = d.input[r0+x];
+						if (r1+x < d.input.length)
+							output[j++] = d.input[r1+x];
+					}
+				}
+				d.output = output;
+			}
+			return d.input;
+		},
+		make_ui: function(root) {
+			
+		},
+		title: "BIFID ROWS"
+	};		
 	exports.remove_characters = {
 		create: function() { return {
 			always_nulls: ""
@@ -305,37 +363,37 @@ define(function(require, exports, module) {
 	exports.stats = {
 		create: function() { return {}; },
 		process: function(d) {
+			var txt;
+			var counts = {};
+			if (typeof d.input == "string") {
+				for (var x in d.input) {
+					var c = d.input.charAt(x);
+					if (!counts[c])
+						counts[c] = 1;
+					else
+						counts[c] = counts[c]+1;
+				}
+			}
+			else {
+				for (var x in d.input) {
+					var c = d.input[x];
+					if (!counts[c])
+						counts[c] = 1;
+					else
+						counts[c] = counts[c]+1;
+				}
+			}
+			var u=0, n=0;
+			for (var k in counts) {
+				u += counts[k] * (counts[k]-1);
+				n += counts[k];
+			}
+			var ic = 10000 * u/(n*(n-1));
+			d.ic = ic;
 			if (d.ui) {
-				var txt;
-				var counts = {};
-				if (typeof d.input == "string") {
-					for (var x in d.input) {
-						var c = d.input.charAt(x);
-						if (!counts[c])
-							counts[c] = 1;
-						else
-							counts[c] = counts[c]+1;
-					}
-				}
-				else {
-					for (var x in d.input) {
-						var c = d.input[x];
-						if (!counts[c])
-							counts[c] = 1;
-						else
-							counts[c] = counts[c]+1;
-					}
-				}
 				console.log("Counts are", counts);
-				var u=0, n=0;
-				for (var k in counts) {
-					u += counts[k] * (counts[k]-1);
-					n += counts[k];
-				}
 				console.log(u, n);
-				var ic = 10000 * u/(n*(n-1));
 				d.ui.innerHTML = `<div>N = ${n}</div><span>IC = ${ic.toFixed(1)} (en=686)</span>`;
-				
  			}
 			d.output = d.input;
 		},
@@ -353,7 +411,6 @@ define(function(require, exports, module) {
 			return {}; 
 		},
 		process: function(d) {
-			d.output = output;
 			if (d.grid) {
 				var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
 				var output = [];
@@ -368,6 +425,8 @@ define(function(require, exports, module) {
 				}
 				d.output = output;
 				d.grid.width = height;
+			} else {
+				d.output = d.input;
 			}
 		},
 		make_ui: function(d) {
@@ -386,13 +445,10 @@ define(function(require, exports, module) {
 		order.sort(function(a,b){return a.value - b.value});
 		if (!d.data.inverse) {
 			var o = [];
-			console.log("AAAA",order);
 			for (var i=0;i<order.length;i++)
 				o[order[i].index] = { index: i };
 			order = o;
-			console.log("inverting to ", o);
 		}
-		console.log("final order", order, " inv=", d.data.inverse);
 		return order;
 	};
 
@@ -666,7 +722,7 @@ define(function(require, exports, module) {
 								b.textContent = '?';
 							}
 						} else {
-							b.textContent = '!';
+							b.textContent = '_';
 						}
 						rr.appendChild(b);
 					}

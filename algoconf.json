@@ -1,0 +1,82 @@
+{
+	"cracks_fixed_begin":[
+		{
+			"type":"input",
+			"data": {
+				"text":"75628285916291648164917485846474748284838163818174748262647583828491757465837575759363656581638175857575646282928574638275748381658184856485648585638272628362818172816463758281648363828581636363047481919184638584656485656294626285918591749172756465757165836264748182846282649181936562648484918385749181657274838385828364627262656283759272638282727283828584758281837284628283758164757485816292"
+			}
+		}
+	],	
+	"cracks_fixed_end":[
+		{
+			"type":"pair_up"
+		},
+		{
+			"type":"polybius"
+		},		
+		{
+			"type":"stats"
+		}
+	],
+	"cracks_insert": [
+		{
+			"type":"skip_nth",
+			"data": {
+				"which": 2
+			}
+		},
+		{
+			"type":"remove_characters",
+			"data": {
+				"always_nulls": "67890"
+			}
+		},
+		{
+			"type":"remove_characters",
+			"data": {
+				"always_nulls": "12345"
+			}
+		},
+		{
+			"type": "make_grid",
+			"data": {
+				"width": 7
+			}
+		},
+		{
+			"type": "make_grid",
+			"data": {
+				"width": 14
+			}
+		},
+		{
+			"type": "make_grid",
+			"data": {
+				"width": 28
+			}
+		},		
+		{
+			"type": "transpose"
+		},
+		{
+			"type":"skip_nth",
+			"data": {
+				"which": 3
+			}
+		},
+		{
+			"type":"skip_nth",
+			"data": {
+				"which": 4
+			}
+		},
+		{
+			"type":"skip_nth",
+			"data": {
+				"which": 5
+			}
+		}
+	],
+	"analyze_prop": "ic",
+	"max_depth": "4"
+}
