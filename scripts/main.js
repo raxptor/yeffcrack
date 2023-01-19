@@ -327,7 +327,7 @@ define(function(require, exports, module) {
 	}
 	
 	exports.startup = function() {
-		/* 'make_grid', 'transpose', 'pair_up', 'transpose', 'cut_half', 'polybius', 'grid_view', */
+		/* 'make_grid', 'transpose', 'group_up', 'transpose', 'cut_half', 'polybius', 'grid_view', */
 		var cracks = deserialize(location.hash) || create_default_instances(['input', 'output']);
 		var uis;
 		document.fn_rebuild = function() {

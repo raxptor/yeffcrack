@@ -1,6 +1,6 @@
 define(function(require, exports, module) {
 
-	exports.modules_for_add = ['input', 'input_text', 'make_grid', 'bifid', 'bifid_rows', 'skip_nth', 'pair_up', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'stats'];
+	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'bifid', 'bifid_rows', 'skip_nth', 'group_up', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'stats'];
 
 	function add_inverse_ui(d) {
 		var inverse = document.createElement('input');
@@ -217,12 +217,23 @@ define(function(require, exports, module) {
 			}
 		}
 	};
-	exports.pair_up = {
-		create: function() { return {}; },
-		process: function(d) {			
+	exports.group_up = {
+		create: function() {
+			return {
+				width: 2
+			}; 
+		},
+		process: function(d) {
 			var output = [];
-			for (var i=0;i<(d.input.length-1);i+=2) {
-				output.push(100 + d.input[i] * 10 + d.input[i+1]);
+			var filler = d.data.width * 100000;
+			var len = d.input.length - (d.data.width - 1)
+			for (var i=0;i<len;i+=d.data.width) {
+				var val = 0;
+				for (var j=0;j<d.data.width;j++) {
+					val *= 10;
+					val += d.input[i + j];
+				}
+				output.push(filler + val);
 			}
 			d.output = output;
 			if (d.grid && (d.grid.width % 2) == 0)
@@ -231,11 +242,31 @@ define(function(require, exports, module) {
 				d.is_fractionated = true;
 			return d.input;
 		},
+		make_ui: function(d) {
+			var width = document.createElement('input');
+			width.value = d.data.width;
+			d.container.appendChild(width);
+			width.onchange = function() {
+				d.data.width = Number(width.value);
+				d.fn_reprocess();
+			};
+		},
+		title: "Group"
+	};
+	exports.reverse = {
+		create: function() { return {}; },
+		process: function(d) {
+			var output = new Array(d.input.length);
+			for (var i=0;i<d.input.length;i++) {
+				output.push(d.input[d.input.length-1-i]);
+			}
+			d.output = output;
+		},
 		make_ui: function(root) {
 			
 		},
-		title: "PairUp"
-	};
+		title: "Reverse"
+	};	
 	exports.bifid = {
 		create: function() { return {}; },
 		process: function(d) {
@@ -269,8 +300,9 @@ define(function(require, exports, module) {
 			var output = [];
 			var j = 0;
 			var which = d.data.which;
+			var offset = d.data.offset;
 			for (var i=0;i<d.input.length;i++) {
-				if ((i % which) != (which-1))
+				if (i % (which+offset) != (which-1))
 					output[j++] = d.input[i];
 			}
 			d.output = output;
@@ -714,9 +746,10 @@ define(function(require, exports, module) {
 								b.textContent = d.input[idx];
 							else if (d.input[idx] >= 0) {
 								var val = d.input[idx];
-								if (val >= 100)
-									b.textContent = String(val).slice(1, 3);
-								else
+								if (val >= 100000) {
+									var howmany = Math.floor(val/100000);
+									b.textContent = String(val).slice(5-howmany, 6);
+								} else
 									b.textContent = val; 
 							} else {
 								b.textContent = '?';

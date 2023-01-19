@@ -147,7 +147,7 @@ define(function(require, exports, module) {
 		}
 	}
 
-	exports.pair_up = {
+	exports.group_up = {
 		write: function(d) {
 			d.lines.push(`
 				for (int i = 0, o=0; i < cur_in_len-1; i+=2) {
