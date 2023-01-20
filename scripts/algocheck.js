@@ -12,6 +12,7 @@ define(function(require, exports, module) {
 				cls: all_mods[def.type],
 			};
 			if (def.data === undefined) {
+				if (!ck.cls) console.error("No definition for", ck.type);
 				ck.data = ck.cls.create();
 			} else {
 				ck.data = def.data;

@@ -1,7 +1,8 @@
 body {
     background-color: #eee;
     color: gray;
-    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 800;
 }
 
 textarea.gridview {
@@ -61,7 +62,9 @@ x-grid-row {
 x-grid-entry {
 	display: inline-block;
 	text-align: center;
-	width: 18px;
+	/*width: 18px;*/
+	padding-left: 2px;
+	padding-right: 2px;
 	height: 18px;
 	border: 1px solid #999;
 	margin-right: -1px;

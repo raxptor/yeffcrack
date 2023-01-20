@@ -1,6 +1,6 @@
 define(function(require, exports, module) {
 
-	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'bifid', 'bifid_rows', 'skip_nth', 'group_up', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'stats'];
+	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'bifid', 'bifid_rows', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'stats'];
 
 	function add_inverse_ui(d) {
 		var inverse = document.createElement('input');
@@ -14,6 +14,15 @@ define(function(require, exports, module) {
 		var s = document.createElement('span');
 		s.textContent = 'Encrypt';
 		d.container.appendChild(s);
+	}
+
+	function ungroup_number_to_str(val) {
+		if (val >= 100000) {
+			var howmany = Math.floor(val/100000);
+			return String(val).slice(6-howmany, 6);
+		} else {
+			return String(val);
+		}
 	}
 
 	exports.input = {
@@ -227,6 +236,7 @@ define(function(require, exports, module) {
 			var output = [];
 			var filler = d.data.width * 100000;
 			var len = d.input.length - (d.data.width - 1)
+			var i = 0;
 			for (var i=0;i<len;i+=d.data.width) {
 				var val = 0;
 				for (var j=0;j<d.data.width;j++) {
@@ -253,6 +263,24 @@ define(function(require, exports, module) {
 		},
 		title: "Group"
 	};
+	exports.ungroup = {
+		create: function() {
+			return {
+			}; 
+		},
+		process: function(d) {
+			var output = [];
+			for (var x in d.input) {
+				var p = ungroup_number_to_str(d.input[x]);
+				for (var i=0;i<p.length;i++)
+					output.push(p.charAt(i) - '0');
+			}
+			d.output = output;
+		},
+		make_ui: function(d) {
+		},
+		title: "Ungroup"
+	};	
 	exports.reverse = {
 		create: function() { return {}; },
 		process: function(d) {
@@ -636,7 +664,7 @@ define(function(require, exports, module) {
 			var real = make_polyb_subst(d);
 			if (!d.data.inverse) {
 				for (var i=0;i<d.input.length;i++) {
-					var a = Math.floor(d.input[i] / 10);
+					var a = Math.floor(d.input[i] / 10) % 10;
 					var b = d.input[i] % 10;
 					var y = (a-1) % 5;
 					var x = (b-1) % 5;
@@ -755,11 +783,7 @@ define(function(require, exports, module) {
 								b.textContent = d.input[idx];
 							else if (d.input[idx] >= 0) {
 								var val = d.input[idx];
-								if (val >= 100000) {
-									var howmany = Math.floor(val/100000);
-									b.textContent = String(val).slice(5-howmany, 6);
-								} else
-									b.textContent = val; 
+								b.textContent = ungroup_number_to_str(val); 
 							} else {
 								b.textContent = '?';
 							}
