@@ -296,26 +296,45 @@ define(function(require, exports, module) {
 		title: "Reverse"
 	};	
 	exports.bifid = {
-		create: function() { return {}; },
+		create: function() { return {
+			inverse: true
+		}; },
 		process: function(d) {
 			if ((d.input.length % 2) != 0) {
 				d.error = "Length not divisible by 2... " + d.input.length;
 				d.output = [];
 			} else {
-				var output = new Array(d.input.length);
-				var j = 0;
-				for (var i=0;i<d.input.length;i+=2) {
-					output[j++] = d.input[i];
-				}
-				for (var i=0;i<d.input.length;i+=2) {
-					output[j++] = d.input[i+1];
+				if (d.data.inverse) {
+					var output = new Array(d.input.length);
+					var j = 0;
+					for (var i=0;i<d.input.length;i+=2) {
+						output[j++] = d.input[i];
+					}
+					for (var i=0;i<d.input.length;i+=2) {
+						output[j++] = d.input[i+1];
+					}
+				} else {
+					var o1 = [];
+					var o2 = [];
+					for (var i=0;i<d.input.length;i++) {
+						if (i < d.input.length/2)
+							o1.push(d.input[i]);
+						else
+							o2.push(d.input[i]);
+					}
+					output = [];
+					for (var i=0;i<o1.length;i++)
+					{
+						output.push(o1[i]);
+						output.push(o2[i]);
+					}
 				}
 				d.output = output;
 			}
 			return d.input;
 		},
-		make_ui: function(root) {
-			
+		make_ui: function(d) {
+			add_inverse_ui(d);
 		},
 		title: "BIFID"
 	};
@@ -482,6 +501,9 @@ define(function(require, exports, module) {
 		process: function(d) {
 			if (d.grid) {
 				var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
+				if (height * d.grid.width != d.input.length) {
+					d.output.error = "No transpose of incomplete matrix"
+				}
 				var output = [];
 				for (var x=0;x<d.grid.width;x++) {
 					for (var y=0;y<height;y++) {
