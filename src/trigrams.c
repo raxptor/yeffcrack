@@ -17587,12 +17587,8 @@ void trigram_init()
 	int count = sizeof(RAW) / sizeof(TrigramInput_t);
 	for (int i = 0; i < count; i++)
 	{
-		int a = RAW[i].txt[0] - 'A';
-		int b = RAW[i].txt[1] - 'A';
-		int c = RAW[i].txt[2] - 'A';
-		table[a * 32 * 32 + b * 32 + c] = (int)(100000.0 * log(RAW[i].value));
+		table[index_trigram(RAW[i].txt)] = (int)(100000.0 * log(RAW[i].value));
 	}
-	printf("Initialized trigrams with %d entries max=%d\n", count, score_trigram("THE"));
 }
 
 int trigram_score_buf(const char *t, int length)

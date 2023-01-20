@@ -143,7 +143,7 @@ define(function(require, exports, module) {
 				var cc = input[x];
 				if (typeof cc == 'number') {
 					if (cc >= 100) {
-						var val = (cc-100)
+						var val = cc % 100;
 						inp.push("\\x" + Math.floor(val/10) + Math.floor(val%10));
 					} else {
 						inp.push("\\x" + Math.floor(cc));
@@ -242,6 +242,7 @@ define(function(require, exports, module) {
 		lines.push("");
 		var d = process_result_d;
 		d.input = input;
+		delete d.ui;
 		var bs = 0;		
 		for (var c=start;c<cracks.length;c++) {
 			if (!cracks[c].enabled)

@@ -1,7 +1,7 @@
 define(function(require, exports, module) {
 	var all_mods = require('./mods/all.js');
 
-	exports.run_algocheck = function(config) {
+	exports.run_algocheck = function(db, config) {
 		console.log("Running algocheck", config);
 		var begin = config.cracks_fixed_begin;
 		var end = config.cracks_fixed_end;
@@ -20,6 +20,8 @@ define(function(require, exports, module) {
 			return ck;
 		}
 
+		var errors = 0;
+
 		function run_cracks(cracks, on_result) {
 			var d = { input: "" };
 			for (var i=0;i<cracks.length;i++) {
@@ -27,8 +29,10 @@ define(function(require, exports, module) {
 					d.data = cracks[i].data;
 					delete d.output;
 					cracks[i].cls.process(d);
-					if (d.error)
-						console.log(d.error);
+					if (d.error) {
+						//console.log(d.error);
+						errors++;
+					}
 					d.input = d.output;
 				} catch (e) {
 					console.error(e);
@@ -37,14 +41,19 @@ define(function(require, exports, module) {
 					return false;
 				}
 			}
+			/*
 			if (d.error) {
 				console.log(d.error); 
 			} 
+			*/
 			if (on_result) {
 				on_result(d);
 			}
 			return !d.error;
 		}
+
+		var added = {};
+		var total_count = 0;
 
 		function eval_inserts(inserts, count)
 		{
@@ -58,12 +67,31 @@ define(function(require, exports, module) {
 			for (var x in end) {
 				ckdefs.push(mk_crack(end[x]));
 			}
+			var grouped = false;
+			for (var i=0;i<ckdefs.length;i++) {
+				if (ckdefs[i].type == "group_up") {
+					if (!grouped)
+						grouped = true;
+					else
+						ckdefs.splice(i--, 1);
+				}
+			}
 			//console.log(ckdefs);
 			run_cracks(ckdefs, function(d) {
 				var prop = d[config.analyze_prop];
 				if (typeof prop == 'number')
 					prop = Math.floor(prop);
-				console.log(config.analyze_prop, "=", prop, d.output.join(''));
+
+				if (((++total_count) % 1000) == 0) {
+					console.log("Processed", total_count, "variants");
+				}
+
+				var txt = d.output.join('');
+				if (txt.length > 30 && !added[d.output]) {
+					//console.log(config.analyze_prop, "=", prop, );
+					added[d.output] = true;
+					db.run("INSERT OR IGNORE INTO decrypt (uncracked, length, eval, steps) VALUES (?, ?, ?, ?)", [txt, txt.length, prop, JSON.stringify(ckdefs)]);
+				}
 			});	
 		}
 
@@ -72,8 +100,18 @@ define(function(require, exports, module) {
 			{
 				inserts[depth] = config.cracks_insert[i];
 				eval_inserts(inserts, depth+1);
-				if (depth < (config.max_depth-1))
-					run_all(inserts, depth+1);
+				if (depth < (config.max_depth-1)) {
+					if (depth < 3) {
+						(function(depth, str) {
+							var ins = JSON.parse(str);
+							setTimeout(function() {
+								run_all(ins, depth+1);
+							}, 30);
+						})(depth, JSON.stringify(inserts));
+					} else {
+						run_all(inserts, depth+1);
+					}
+				}
 			}
 		}
 

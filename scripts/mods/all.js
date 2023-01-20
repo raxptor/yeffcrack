@@ -116,6 +116,32 @@ define(function(require, exports, module) {
 		}
 	};
 
+	function diag_transp(perm, d, x, y, dx, dy, spx, spy)
+	{
+		var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
+		var len = d.grid.width + height;
+		var used = {};
+		var count = 0;
+		for (var i=0;i<len;i++)
+		{
+			for (var j=-len;j<=len;j++)
+			{
+				var tx = x + dx*j;
+				var ty = y + dy*j;
+				if (tx >= 0 && tx < d.grid.width && ty >= 0 && ty < height) {
+					var idx = ty * d.grid.width + tx;
+					if (!used[idx]) {
+						used[idx] = true;
+						++count;
+					}
+					perm.push(idx);
+				}
+			}
+			x += spx;
+			y += spy;
+		}
+	}
+
 	function make_pattern_perm(d, update_d_grid_size) {
 		var perm = [];
 		var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
@@ -156,6 +182,10 @@ define(function(require, exports, module) {
 					d.grid.width = d.grid.width - 1;
 				break;
 			}
+			case "DiagTranspose0" : {
+				diag_transp(perm, d, 0, 0, 1, -1, 0, 1);
+				break;
+			}
 
 		}
 		return perm;
@@ -172,9 +202,10 @@ define(function(require, exports, module) {
 
 			var selectList = document.createElement("select");
 			var opts = {
-				"RowFlipOdd"  : "Reverse odd rows",
-				"HorizMirror" : "Mirror horizontally",
-				"RmColR"      : "Remove rightmost column"
+				"RowFlipOdd"       : "Reverse odd rows",
+				"HorizMirror"      : "Mirror horizontally",
+				"RmColR"           : "Remove rightmost column",
+				"DiagTranspose0"   : "DiagTranspose"
 			};
 			var cont = [];
 			for (var x in opts) {
@@ -297,13 +328,14 @@ define(function(require, exports, module) {
 	};	
 	exports.bifid = {
 		create: function() { return {
-			inverse: true
+			inverse: false
 		}; },
 		process: function(d) {
-			if ((d.input.length % 2) != 0) {
+			/*if ((d.input.length % 2) != 0) {
 				d.error = "Length not divisible by 2... " + d.input.length;
 				d.output = [];
-			} else {
+			} else 
+			*/{
 				if (d.data.inverse) {
 					var output = new Array(d.input.length);
 					var j = 0;
@@ -502,7 +534,7 @@ define(function(require, exports, module) {
 			if (d.grid) {
 				var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
 				if (height * d.grid.width != d.input.length) {
-					d.output.error = "No transpose of incomplete matrix"
+					d.error = "No transpose of incomplete matrix"
 				}
 				var output = [];
 				for (var x=0;x<d.grid.width;x++) {
@@ -510,8 +542,6 @@ define(function(require, exports, module) {
 						var idx = y * d.grid.width + x;
 						if (idx < d.input.length)
 							output.push(d.input[idx]);
-						else
-							output.push(-1);
 					}
 				}
 				d.output = output;
@@ -554,6 +584,8 @@ define(function(require, exports, module) {
 		make_order: make_order,
 		process: function(d) {
 			d.output = d.input;
+			if (order.length < 2)
+				return;
 			var order = make_order(d);
 			d.grid = { width: order.length };
 			var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
@@ -688,8 +720,8 @@ define(function(require, exports, module) {
 				for (var i=0;i<d.input.length;i++) {
 					var a = Math.floor(d.input[i] / 10) % 10;
 					var b = d.input[i] % 10;
-					var y = (a-1) % 5;
-					var x = (b-1) % 5;
+					var y = (5+a-1) % 5;
+					var x = (5+b-1) % 5;
 					var c = y*5+x;
 					if (c >= 0 && c < 25) {
 						indices.push(c);

@@ -10,7 +10,7 @@ void permutation_reset(char* p, int len, char base)
 void permutation_walk(char* perm, MTRand* rand, int len)
 {
 	int whatToDo = genRandLong(rand) & 0xff;
-	if (whatToDo < 10) {
+	if (whatToDo < 3) {
 		// mirror
 		char tmp[128];
 		memcpy(tmp, perm, len);
@@ -18,7 +18,7 @@ void permutation_walk(char* perm, MTRand* rand, int len)
 			perm[i] = tmp[len - 1 - i];
 		}
 	}
-	else if (whatToDo < 50 && len > 4) {
+	else if (whatToDo < 5 && len > 4) {
 		// pivot swap
 		// 012 3456
 		int pivot = 1 + genRandLong(rand) % (len - 2);
@@ -32,7 +32,7 @@ void permutation_walk(char* perm, MTRand* rand, int len)
 			perm[outp++] = tmp[i];
 		}
 	}
-	else if (whatToDo < 100) {
+	else if (whatToDo < 10) {
 		// rotate left
 		char t = perm[0];
 		for (int i = 0; i < len - 1; i++)

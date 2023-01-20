@@ -15,6 +15,7 @@ typedef struct algo_reset_data_t {
 } algo_reset_data;
 
 typedef int(*t_score_fn)(const char* buf, int length);
+typedef void(*t_analyze_fn)(const char* buf);
 int user_chosen_scoring(const char* buf, int length);
 
 int algo_size();
@@ -27,6 +28,8 @@ int algo_is_fractionated();
 
 void trigram_init();
 int trigram_score_buf(const char *t, int length);
+void quadgram_init();
+int quadgram_score_buf(const char *t, int length);
 int score_freq(const char* buf, int length);
 
 void words_init();
@@ -46,6 +49,9 @@ int compute_ic(const char* buf, int len);
 #define ENGLISH_IC 6860
 
 void hillclimb();
+
+void bulk_analyze_freq(const char *buf);
+void bulk_analyze_subst(const char *buf);
 
 #define RNDWALK_POLYBIUS            1
 #define RNDWALK_TRANSPOSITION       2
