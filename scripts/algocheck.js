@@ -54,6 +54,7 @@ define(function(require, exports, module) {
 
 		var added = {};
 		var total_count = 0;
+		var uniq_count = 0;
 
 		function eval_inserts(inserts, count)
 		{
@@ -83,13 +84,14 @@ define(function(require, exports, module) {
 					prop = Math.floor(prop);
 
 				if (((++total_count) % 1000) == 0) {
-					console.log("Processed", total_count, "variants");
+					console.log("Processed", total_count, "variants with", uniq_count, " unique outputs");
 				}
 
 				var txt = d.output.join('');
 				if (txt.length > 30 && !added[d.output]) {
 					//console.log(config.analyze_prop, "=", prop, );
 					added[d.output] = true;
+					uniq_count++;
 					db.run("INSERT OR IGNORE INTO decrypt (uncracked, length, eval, steps) VALUES (?, ?, ?, ?)", [txt, txt.length, prop, JSON.stringify(ckdefs)]);
 				}
 			});	

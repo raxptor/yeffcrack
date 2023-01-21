@@ -9,8 +9,9 @@ void bulk_analyze_freq(const char *buf)
 	char tmp[1024];
 	strcpy(tmp, buf);
 	int len = strlen(buf);
-	int freq_score = score_freq(tmp, len);
-	printf("%s %d\n", tmp, freq_score);
+	int freq_score = score_freq_with_sorting_positive(tmp, len);
+
+	printf("\"%s\": { \"freq_rating\": \"%d\" }\n", buf, freq_score);
 }
 
 void source_alphabet(char *buf, MTRand *rand)

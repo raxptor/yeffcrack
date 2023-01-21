@@ -31,6 +31,7 @@ int trigram_score_buf(const char *t, int length);
 void quadgram_init();
 int quadgram_score_buf(const char *t, int length);
 int score_freq(const char* buf, int length);
+int score_freq_with_sorting_positive(const char* buf, int length);
 
 void words_init();
 const char* word_get_random(int length, MTRand* rand);

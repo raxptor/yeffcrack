@@ -89,6 +89,7 @@ int main(int argc, char *argv[])
 				return 0;
 			} if (!strcmp(argv[i], "--debug-analyze")) {
 				call_analyze(argv[i + 1], "DZBESHZDKSQGJEMSZSMEKFKJBISKBABFKBMYSHZSVDEZSIKBJSRGADHZDUTCSMBKHBVBUUBIWBIHZSMBULZGFMXFHCZBTUBCK");
+				call_analyze(argv[i + 1], "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBB");
 				return 0;
 			}
 		}

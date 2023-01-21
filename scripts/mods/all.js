@@ -1,6 +1,6 @@
 define(function(require, exports, module) {
 
-	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'bifid', 'bifid_rows', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'stats'];
+	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'stats'];
 
 	function add_inverse_ui(d) {
 		var inverse = document.createElement('input');
@@ -14,6 +14,44 @@ define(function(require, exports, module) {
 		var s = document.createElement('span');
 		s.textContent = 'Encrypt';
 		d.container.appendChild(s);
+	}
+
+	function add_input_box(d, prop) { 
+		var fixed = document.createElement('input');
+		fixed.value = d.data[prop];
+		fixed.style.width = "300px";
+		fixed.onchange = function() {
+			d.data[prop] = fixed.value;
+			document.fn_reprocess();
+		}
+		d.container.appendChild(fixed);
+	}
+
+	function apply_perm(d, perm, invert) {
+		var output = new Array(d.input);
+		if (invert) {
+			// inverted
+			for (var i=0;i<d.input.length;i++) {
+				if (i >= perm.length) {
+					console.error("Invalid permutation for length!");
+					continue;
+				}
+				var s = perm[i];
+				if (s < d.input.length)
+					output[s] = d.input[i];
+				else
+					console.error("Invalid permutation for length!");
+			}
+		} else {
+			for (var i=0;i<perm.length;i++) {
+				var s = perm[i];
+				if (s < d.input.length)
+					output[i] = d.input[s];
+				else
+					console.error("Invalid permutation for length!");
+			}
+		}
+		d.output = output;
 	}
 
 	function ungroup_number_to_str(val) {
@@ -189,8 +227,7 @@ define(function(require, exports, module) {
 
 		}
 		return perm;
-	}
-	
+	}	
 	exports.grid_pattern = {
 		create: function(d) { // returns 'data' object
 			return {
@@ -238,8 +275,6 @@ define(function(require, exports, module) {
 						var s = perm[i];
 						if (s < d.input.length)
 							output[s] = d.input[i];
-						else
-							output.push(-1);
 					}
 				} else {
 					// regular
@@ -247,8 +282,6 @@ define(function(require, exports, module) {
 						var s = perm[i];
 						if (s < d.input.length)
 							output.push(d.input[s]);
-						else
-							output.push(-1);
 					}
 				}
 				d.output = output;
@@ -257,6 +290,50 @@ define(function(require, exports, module) {
 			}
 		}
 	};
+
+
+	function make_perm_rf(width, length) {
+		var rfs = [];
+		for (var i=0;i<width;i++) rfs.push([]);
+		var up = true;
+		var r = 0;
+		for (var i=0;i<length;i++) {
+			rfs[r].push(i);
+			if (up) {
+				if (++r == width) {
+					r = r - 2;
+					up = false;
+				}
+			} else {
+				if (--r < 0) {
+					r = 1;
+					up = true;
+				}
+			}
+		}
+		var output = [];
+		for (var i=0;i<width;i++)
+			output = output.concat(rfs[i]);
+		return output;
+	}
+
+	exports.rail_fence = {
+		create: function(d) { // returns 'data' object
+			return {
+				width: 3
+			}
+		},
+		make_perm_rf: make_perm_rf,
+		make_ui: function(d) {
+			add_input_box(d, "width");
+			add_inverse_ui(d);
+		},
+		title: "Rail Fence",
+		process: function(d) {
+			apply_perm(d, make_perm_rf(d.data.width, d.input.length), !d.data.inverse);
+		}
+	};
+
 	exports.group_up = {
 		create: function() {
 			return {
@@ -584,9 +661,9 @@ define(function(require, exports, module) {
 		make_order: make_order,
 		process: function(d) {
 			d.output = d.input;
+			var order = make_order(d);
 			if (order.length < 2)
 				return;
-			var order = make_order(d);
 			d.grid = { width: order.length };
 			var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
 			var output = [];
@@ -614,7 +691,6 @@ define(function(require, exports, module) {
 				d.data.keyword = fixed.value;
 				document.fn_reprocess();
 			}
-
 			d.container.appendChild(fixed);
 
 			add_inverse_ui(d);
