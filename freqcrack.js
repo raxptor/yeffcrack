@@ -9,6 +9,7 @@ const db = new sqlite3.Database(conf.database, (err) => {
 		exit(-1);
 	} else {
 		bulk.bucket_size = 256;
+		bulk.num_buckets = 32;
 		bulk.crack_it(db, "SELECT uncracked FROM decrypt WHERE freq_rating is NULL", "freq", function(cipher, r) {
 			if (r.freq_rating) {
 				db.run("UPDATE decrypt SET freq_rating = ? WHERE uncracked = ?", [r.freq_rating, cipher], function(err) {

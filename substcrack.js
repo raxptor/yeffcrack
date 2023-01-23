@@ -8,8 +8,8 @@ const db = new sqlite3.Database(conf.database, (err) => {
 		console.log("Failed to open database.");
 		exit(-1);
 	} else {
-		bulk.bucket_size = 3;
-		bulk.num_buckets = 3;
+		bulk.bucket_size = 2;
+		bulk.num_buckets = 6;
 		bulk.crack_it(db, "SELECT uncracked, abs(eval-686) as ic_diff, length, freq_rating from decrypt WHERE cracked is NULL ORDER BY is_test_data ASC, abs(length-98) asc, coalesce(freq_rating, 1000000) ASC, ic_diff ASC", "subst", function(cipher, r) {
 			if (r.quadgram_rating && r.cracked) {
 				console.log(r);
