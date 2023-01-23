@@ -48,8 +48,14 @@ define(function(require, exports, module) {
         automake: function(cracks, state, output) {
             if (state.group_width == 2) {
                 var wrong = false;
-                for (var i=0;i<state.input.length;i++) {
-                    if ((state.input[i] % 100) < 60) {
+                for (var i=0;i<state.input.length && i < 30;i++) {
+                    var first = Math.floor(state.input[i]/10) % 10;
+                    var second = state.input[i] % 10;
+                    if (first != 0 && first != 6 && first != 7 && first != 8 && first != 9) {
+                        wrong = true;
+                        break;
+                    }
+                    if (second != 1 && second != 2 && second != 3 && second != 4 && second != 5) {
                         wrong = true;
                         break;
                     }

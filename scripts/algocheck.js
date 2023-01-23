@@ -7,6 +7,32 @@ define(function(require, exports, module) {
 		var begin = config.cracks_fixed_begin;
 		var end = config.cracks_fixed_end;
 
+		function is_junk(result)
+		{
+			var last = 0;
+			var rl = 0;
+			var trips = 0;
+			var quads = 0;
+			var octas = 0;
+			for (var i=0;i<result.length;i++) {
+				if (result[i] != last) {
+					last = result[i];
+					rl = 0;
+				} else {
+					++rl;
+					if (rl == 3) trips++;
+					if (rl == 4) quads++;
+					if (rl == 8) octas++;
+				}
+			}
+
+			if (trips > 2 || quads > 1 || octas > 0)  {
+				//console.log("This is junk ", result.join(''));
+				return true;
+			}
+			return false;
+		}
+
 		function mk_crack(def) {
 			var ck = {
 				type: def.type,
@@ -60,6 +86,7 @@ define(function(require, exports, module) {
 		var added = {};
 		var total_count = 0;
 		var uniq_count = 0;
+		var junk_count = 0;
 
 		function on_output(d, ckdefs) {
 			var prop = d[config.analyze_prop];
@@ -67,7 +94,7 @@ define(function(require, exports, module) {
 				prop = Math.floor(prop);
 
 			if (((++total_count) % 1000) == 0) {
-				console.log("Processed", total_count, "variants with", uniq_count, " unique outputs");
+				console.log("Processed", total_count, "variants with", uniq_count, " unique outputs (", junk_count, " junk)");
 			}
 
 			var txt = d.output.join('');
@@ -75,7 +102,11 @@ define(function(require, exports, module) {
 				//console.log(txt, config.analyze_prop, "=", prop, ckdefs);
 				added[d.output] = true;
 				uniq_count++;
-				db.run("INSERT OR IGNORE INTO decrypt (uncracked, length, eval, steps) VALUES (?, ?, ?, ?)", [txt, txt.length, prop, JSON.stringify(ckdefs)]);
+				if (is_junk(d.input)) {
+					junk_count++;
+				} else {
+					db.run("INSERT OR IGNORE INTO decrypt (uncracked, length, eval, steps) VALUES (?, ?, ?, ?)", [txt, txt.length, prop, JSON.stringify(ckdefs)]);
+				}
 			}
 		}
 
@@ -109,7 +140,7 @@ define(function(require, exports, module) {
 			run_cracks(ckdefs, function(d) {
 
 				if (d.input.length < 10)
-					return;
+					return;				
 
 				var to_consider = [];
 				for (var i=0;i<config.autocracks.length;i++)
