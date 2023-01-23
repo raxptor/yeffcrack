@@ -63,7 +63,7 @@ int new_crack(void *p, t_score_fn scoring, MTRand* rand)
 
 void hillclimb_single(char* cur, t_score_fn scoring, int mask, int step_size, int max_iterations, MTRand* rnd)
 {
-	int best = scoring(cur, algo_size());
+	int best = algo_score(cur, scoring, 0);
 	int since_improv = 0;
 	while (since_improv < max_iterations) {
 		char tmp[256];
@@ -174,12 +174,6 @@ void hillclimb()
 		hillclimb_single(cur, user_chosen_scoring, 0xfffff, 2, 1000, &rnd);
 		*/
 		hillclimb_single(cur, user_chosen_scoring, 0xfffff, 1, 500, &rnd);
-		if (rand()%100 == 0) {
-			algo_reset_data rd;
-			memset(&rd, 0x00, sizeof(rd));
-			rd.polybius = "CREDNWTABFGHIKLMOPQSUVXYZ";
-			algo_reset(cur, &rd);
-		}
 		int score = algo_score(cur, user_chosen_scoring, 0);
 		if (score > best_ever) {
 			printf("Score: %d ", score);

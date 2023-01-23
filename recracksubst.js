@@ -1,18 +1,19 @@
 var sqlite3 = require('sqlite3');
-var bulk = require('./scripts/bulkcrack.js');
-var conf = require('./algoconf.json');
+var amd = require('./scripts/amd-loader.js');
+var misc = require('./scripts/normalize.js');
 
-const db = new sqlite3.Database(conf.database, (err) => {
+const db = new sqlite3.Database("texts.sqlite3", (err) => {
 	if (err) {
 		console.error(err.message);
 		console.log("Failed to open database.");
 		exit(-1);
 	} else {
+		var touche = 1;
 		bulk.bucket_size = 3;
-		bulk.num_buckets = 3;
-		bulk.crack_it(db, "SELECT uncracked, abs(eval-686) as ic_diff, length, freq_rating from decrypt WHERE cracked is NULL ORDER BY is_test_data ASC, abs(length-98) asc, coalesce(freq_rating, 1000000) ASC, ic_diff ASC", "subst", function(cipher, r) {
+		bulk.crack_it(db, "SELECT uncracked, freq_rating from decrypt WHERE is_test_data=0 AND touched <> " + touche + " ORDER BY COALESCE(quadgram_rating/length, 0) DESC", "subst", function(cipher, r) {
 			if (r.quadgram_rating && r.cracked) {
 				console.log(r);
+				db.run("UPDATE decrypt SET touched = ? WHERE uncracked = ?", [touche, cipher]);
 				db.run("UPDATE decrypt SET quadgram_rating = ?, cracked = ? WHERE uncracked = ? AND (quadgram_rating IS NULL OR quadgram_rating < ?)", [r.quadgram_rating, r.cracked, cipher, r.quadgram_rating], function(err) {
 					if (err) {
 						console.error("DB err=", err);

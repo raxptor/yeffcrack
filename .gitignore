@@ -1,2 +1,4 @@
 algo.c
 dist
+*.db
+*.sqlite3

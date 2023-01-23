@@ -89,17 +89,26 @@ define(function(require, exports, module) {
 
 				var txt = d.output.join('');
 				if (txt.length > 30 && !added[d.output]) {
-					//console.log(config.analyze_prop, "=", prop, );
+					// console.log(txt, config.analyze_prop, "=", prop, );
 					added[d.output] = true;
 					uniq_count++;
-					db.run("INSERT OR IGNORE INTO decrypt (uncracked, length, eval, steps) VALUES (?, ?, ?, ?)", [txt, txt.length, prop, JSON.stringify(ckdefs)]);
+					db.run("INSERT OR IGNORE INTO decrypt (uncracked, length, eval, steps) VALUES (?, ?, ?, ?)", [txt, txt.length, prop, JSON.stringify(ckdefs)], function(err) {
+						if (err) console.error(err);
+					});
 				}
 			});	
 		}
 
 		function run_all(inserts, depth) {
+			var removed = false;
+			for (var i=0;i<depth;i++) {
+				if (inserts[i].type == "remove_characters")
+					removed = true;
+			}
 			for (var i=0;i<config.cracks_insert.length;i++)
 			{
+				if (removed && config.cracks_insert[i].type == "remove_characters")
+					continue;
 				inserts[depth] = config.cracks_insert[i];
 				eval_inserts(inserts, depth+1);
 				if (depth < (config.max_depth-1)) {

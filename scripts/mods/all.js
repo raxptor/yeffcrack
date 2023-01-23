@@ -1,19 +1,24 @@
 define(function(require, exports, module) {
 
-	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'stats'];
+	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'stats'];
 
-	function add_inverse_ui(d) {
+	function add_toggle_ui(d, prop, label) {
 		var inverse = document.createElement('input');
 		inverse.type = "checkbox";
-		inverse.checked = d.data.inverse;
+		inverse.checked = d.data[prop];
 		inverse.onchange = function() {
-			d.data.inverse = inverse.checked;
+			d.data[prop] = inverse.checked;
 			document.fn_reprocess();
 		}
 		d.container.appendChild(inverse);
 		var s = document.createElement('span');
-		s.textContent = 'Encrypt';
+		s.textContent = label;
 		d.container.appendChild(s);
+	}
+
+
+	function add_inverse_ui(d) {
+		add_toggle_ui(d, "inverse", "Encrypt");
 	}
 
 	function add_input_box(d, prop) { 
@@ -208,7 +213,7 @@ define(function(require, exports, module) {
 					++row;
 				}
 				break;
-			}	
+			}			
 			case "RmColR": {
 				var idx = 0;
 				for (var y=0;y<height;y++) {
@@ -250,7 +255,7 @@ define(function(require, exports, module) {
 				k.value = x;
 				k.text = opts[x];
 				cont.push(x);
-				if (d.data.mode == x)				
+				if (d.data.mode == x)
 					k.selected = true;
 					selectList.appendChild(k);
 			}
@@ -258,7 +263,7 @@ define(function(require, exports, module) {
 				d.data.mode = cont[selectList.selectedIndex];
 				document.fn_reprocess();
 			}			
-			d.container.appendChild(selectList);			
+			d.container.appendChild(selectList);
 			add_inverse_ui(d);
 		},
 		title: "Grid Pattern",
@@ -333,6 +338,28 @@ define(function(require, exports, module) {
 			apply_perm(d, make_perm_rf(d.data.width, d.input.length), !d.data.inverse);
 		}
 	};
+
+	exports.char2num = {
+		create: function(d) { // returns 'data' object
+			return {
+				str: "_ABCDELMNOP"
+			}
+		},
+		make_perm_rf: make_perm_rf,
+		make_ui: function(d) {
+			add_input_box(d, "str");
+		},
+		title: "Char2Num",
+		process: function(d) {
+			var out = [];
+			for (var i=0;i<d.input.length;i++) {
+				var utp = d.data.str.indexOf(d.input[i]);
+				if (utp != -1 && d.data.str[utp] != '_')
+					out.push(utp);
+			}
+			d.output = out;
+		}
+	};	
 
 	exports.group_up = {
 		create: function() {
@@ -742,6 +769,47 @@ define(function(require, exports, module) {
 		},
 		title: "CutHalfLR"
 	};
+	exports.pair_sort = {
+		title: "Pair Sort",
+		create: function() { 
+			return {
+				prefixes: '67890',
+				bycols: false
+			}; 
+		},
+		process: function(d) {
+			var rows = [];
+			for (var p=0;p<d.data.prefixes.length;p++) 
+				rows.push([]);
+
+			for (var i=0;i<d.input.length;i++) {
+				var str = ungroup_number_to_str(d.input[i]);
+				if (str.length > 1) {
+					var idx = d.data.prefixes.indexOf(str.charAt(0));
+					if (idx >= 0 && idx < rows.length)
+						rows[idx].push(d.input[i]);
+				}
+			}
+			var output = [];
+			if (d.data.bycols) {
+				for (var i=0;i<d.input.length;i++) {
+					for (var j=0;j<rows.length;j++) {
+						if (i < rows[j].length)
+							output.push(rows[j][i]);
+					}
+				}
+			} else {
+				for (var j=0;j<rows.length;j++) {
+					output = output.concat(rows[j]);
+				}
+			}
+			d.output = output;
+		},
+		make_ui: function(d) {
+			add_input_box(d, "prefixes");
+			add_toggle_ui(d, "bycols", "ReadByCols");
+		},
+	}
 	exports.cut_half_tb = {
 		create: function() { 
 			return {}; 
@@ -903,17 +971,30 @@ define(function(require, exports, module) {
 					root.removeChild(root.childNodes[0]);
 				}
 				var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
+				var colors = ["#FFFF00", "#1CE6FF", "#FF4A46", "#008941", "#F06FA6", "#FFDBE5", "#E249EE",  "#63FFAC", "#B79762", "#8FB0FF", "#997D87",
+				"#809693", "#FEFFE6", "#5B8440", "#4FC601", "#3B5DFF", "#4AFB53", "#FF2F80", "#61615A", "#BA0900", "#6B7900", "#00C2A0", "#FFAA92", "#FF90C9", "#B903AA", "#D16100",
+				"#DDEFFF", "#000035", "#7B4F4B", "#A1C299",  "#0AA6D8", "#013349", "#00846F", "#372101", "#FFB500", "#C2FFED", "#A079BF", "#CC0744", "#C0B9B2", "#C2FF99", "#001E09",
+				"#00489C", "#6F0062", "#0CBD66", "#EEC3FF", "#456D75", "#B77B68", "#7A87A1", "#788D66", "#885578", "#FAD09F", "#FF8A9A", "#D157A0", "#BEC459", "#456648", "#0086ED", "#886F4C" ];
+				var colmap = {};
+				var colindex = 0;
 				for (var y=0;y<height;y++) {
 					var rr = document.createElement('x-grid-row');
 					for (var x=0;x<d.grid.width;x++) {
 						var b = document.createElement('x-grid-entry');
 						var idx = y*d.grid.width+x;
 						if (idx < d.input.length) {
-							if (typeof d.input[idx] == 'string')
-								b.textContent = d.input[idx];
-							else if (d.input[idx] >= 0) {
-								var val = d.input[idx];
-								b.textContent = ungroup_number_to_str(val); 
+
+							var v = d.input[idx];
+							if (colmap[v] === undefined) 
+								colmap[v] = colindex++;
+							var c = colmap[v];
+							b.style.backgroundColor = colors[c];
+							//b.style.color = colors[c];
+
+							if (typeof v == 'string')
+								b.textContent = v;
+							else if (v >= 0) {
+								b.textContent = ungroup_number_to_str(v); 
 							} else {
 								b.textContent = '?';
 							}

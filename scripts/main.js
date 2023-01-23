@@ -5,7 +5,7 @@ define(function(require, exports, module) {
 	var picker = require('scripts/picker.js');
 
 	function serialize(cracks) {
-		var storage = [1];
+		var storage = [2];
 		for (var x in cracks) {
 			storage.push( {
 				t: cracks[x].type,
@@ -22,7 +22,12 @@ define(function(require, exports, module) {
 		var arr = JSON.parse(atob(txt.substr(1)));
 		console.log("It is", arr);
 		var cracks = [];
-		if (arr == undefined || arr.length < 2 || arr[0] != 1)
+		if (arr[0] == 1) {
+			// patch v1 to v2
+			for (var x=1;x<arr.length;x++) if (arr[x].t == "pair_up") { arr[x].t = "group_up"; arr[x].d = { width: 2} }
+			arr[0] = 2;
+		}
+		if (arr == undefined || arr.length < 2 || arr[0] != 2)
 			return null;
 		for (var x=1;x<arr.length;x++) {
 			if (!all_mods[arr[x].t])

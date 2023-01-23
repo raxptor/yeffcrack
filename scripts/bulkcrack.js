@@ -1,7 +1,7 @@
 var async = require('async');
 var child_process = require('child_process');
 
-exports.num_buckets = 6;
+exports.num_buckets = 3;
 exports.bucket_size = 6;
 
 exports.crack_it = function(db, select, method, process) {
