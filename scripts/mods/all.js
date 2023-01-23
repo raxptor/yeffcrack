@@ -162,7 +162,7 @@ define(function(require, exports, module) {
 	function diag_transp(perm, d, x, y, dx, dy, spx, spy)
 	{
 		var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
-		var len = d.grid.width + height;
+		var len = 2*(d.grid.width + height);
 		var used = {};
 		var count = 0;
 		for (var i=0;i<len;i++)
@@ -173,11 +173,15 @@ define(function(require, exports, module) {
 				var ty = y + dy*j;
 				if (tx >= 0 && tx < d.grid.width && ty >= 0 && ty < height) {
 					var idx = ty * d.grid.width + tx;
-					if (!used[idx]) {
-						used[idx] = true;
-						++count;
+					if (idx < d.input.length) {
+						if (!used[idx]) {
+							used[idx] = true;
+							++count;
+						}
+						perm.push(idx);
+						if (count == d.input.length)
+							break;
 					}
-					perm.push(idx);
 				}
 			}
 			x += spx;
@@ -368,6 +372,14 @@ define(function(require, exports, module) {
 			}; 
 		},
 		process: function(d) {
+			if (d.group_width == d.data.width) {
+				d.output = d.input;
+				return;
+			} else if (d.group_width) {
+				d.error = "Already grouped";
+				d.output = d.input;
+				return;
+			}
 			var output = [];
 			var filler = d.data.width * 100000;
 			var len = d.input.length - (d.data.width - 1)
@@ -381,11 +393,11 @@ define(function(require, exports, module) {
 				output.push(filler + val);
 			}
 			d.output = output;
+			d.group_width = d.data.width;
 			if (d.grid && (d.grid.width % 2) == 0)
 				d.grid.width = d.grid.width / 2;
 			if (d.columns_are_random)
 				d.is_fractionated = true;
-			return d.input;
 		},
 		make_ui: function(d) {
 			var width = document.createElement('input');
@@ -411,6 +423,7 @@ define(function(require, exports, module) {
 					output.push(p.charAt(i) - '0');
 			}
 			d.output = output;
+			delete d.group_width;
 		},
 		make_ui: function(d) {
 		},
