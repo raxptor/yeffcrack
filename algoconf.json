@@ -1,5 +1,5 @@
 {
-	"database": "texts.sqlite3",
+	"database": "mega-5.sqlite3",
 	"cracks_fixed_begin":[
 		{
 			"type":"input",
@@ -22,7 +22,7 @@
 			"type":"stats"
 		}
 	],
-	"autocracks": ["pair_sort", "group_up", "make_grid", "transpose"],
+	"autocracks": ["pair_sort", "make_grid", "group_up", "transpose"],
 	"cracks_insert": [
 		{
 			"type":"grid_pattern",
@@ -37,7 +37,7 @@
 				"mode": "DiagTranspose0",
 				"inverse": true
 			}
-		},		
+		},
 		{
 			"type":"grid_pattern",
 			"data": {
@@ -77,6 +77,8 @@
 			"unique": "rmchar"
 		}
 	],
+	"eval_min": 420,
+	"eval_max": 750,
 	"analyze_prop": "ic",
 	"max_depth": 5
 }

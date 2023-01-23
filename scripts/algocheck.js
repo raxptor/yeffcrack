@@ -1,14 +1,17 @@
 define(function(require, exports, module) {
 	var all_mods = require('./mods/all.js');
 	var autoconf = require('./mods/autoconf.js');
+	var util = require('./util.js');
+
+	exports.dry_run = false;
 
 	exports.run_algocheck = function(db, config) {
-		console.log("Running algocheck", config);
+		console.log("Running algocheck", config, " dry_run", this.dry_run);
 		var begin = config.cracks_fixed_begin;
 		var end = config.cracks_fixed_end;
+		var dry_run = this.dry_run;
 
-		function is_junk(result)
-		{
+		function is_junk(result) {
 			var last = 0;
 			var rl = 0;
 			var trips = 0;
@@ -50,6 +53,8 @@ define(function(require, exports, module) {
 		var errors = 0;
 		var pause = 0;
 
+		var prep = db.prepare("INSERT OR IGNORE INTO decrypt (uncracked, length, eval, steps) VALUES (?, ?, ?, ?)");
+
 		function run_cracks(cracks, on_result) {
 			var d = { input: "" };
 			for (var i=0;i<cracks.length;i++) {
@@ -74,9 +79,9 @@ define(function(require, exports, module) {
 					on_result(d);
 				} else {
 					console.log("Pause...");
-					setTimeout(function() {
+					/*setTimeout(function() {
 						on_result(d);
-					}, 100);
+					}, 100);*/
 					pause = 0;
 				}
 			}
@@ -84,9 +89,13 @@ define(function(require, exports, module) {
 		}
 
 		var added = {};
+		var normalized = {};
 		var total_count = 0;
+		var bad_eval = 0;
 		var uniq_count = 0;
 		var junk_count = 0;
+		var normdupes_count = 0;
+		var culled = 0;		
 
 		function on_output(d, ckdefs) {
 			var prop = d[config.analyze_prop];
@@ -94,23 +103,36 @@ define(function(require, exports, module) {
 				prop = Math.floor(prop);
 
 			if (((++total_count) % 1000) == 0) {
-				console.log("Processed", total_count, "variants with", uniq_count, " unique outputs (", junk_count, " junk)");
+				console.log(`Processed ${total_count} variants with ${uniq_count} unique outputs, ${bad_eval} junk, ${junk_count} garbage. Culled trees=${culled}`);
 			}
 
 			var txt = d.output.join('');
 			if (txt.length > 30 && !added[d.output]) {
 				//console.log(txt, config.analyze_prop, "=", prop, ckdefs);
-				added[d.output] = true;
+				added[d.output] = true;	
 				uniq_count++;
-				if (is_junk(d.input)) {
+				if (is_junk(txt)) {
 					junk_count++;
 				} else {
-					db.run("INSERT OR IGNORE INTO decrypt (uncracked, length, eval, steps) VALUES (?, ?, ?, ?)", [txt, txt.length, prop, JSON.stringify(ckdefs)]);
+					if (prop < config.eval_min || prop > config.eval_max) {
+						bad_eval++;
+					} else {
+						if (!dry_run)
+							prep.run([txt, txt.length, prop, JSON.stringify(ckdefs)]);
+					}
+	
+					/*
+					var n = util.normalize(txt);
+					if (normalized[n] !== undefined)
+						normdupes_count++;
+					normalized[n] = true;
+					*/
 				}
 			}
 		}
 
 		var depth_end = begin.length + config.max_depth;
+		var visit_cat = {};
 
 		function run_all(inserts, tags, depth) {
 
@@ -127,7 +149,7 @@ define(function(require, exports, module) {
 
 			if (depth == (depth_end+1)) {
 				for (var i=0;i<end.length;i++) {
-					ckdefs.push(mk_crack(end[i]));				
+					ckdefs.push(mk_crack(end[i]));
 				}
 				// console.log("Running cracks with end", ckdefs);
 				run_cracks(ckdefs, function(d) {
@@ -140,7 +162,27 @@ define(function(require, exports, module) {
 			run_cracks(ckdefs, function(d) {
 
 				if (d.input.length < 10)
-					return;				
+					return;
+
+				var grid_width = (d.grid !== undefined) ? d.grid.width : 0;
+				var group_width = d.group_width || 0;
+				var category_index = 1024 * d.input.length + 128 * grid_width + group_width;
+				if (visit_cat[category_index] === undefined) {
+					visit_cat[category_index] = {
+					};
+				}
+				var cat = visit_cat[category_index];
+				var key = d.input.join('');
+				if (cat[key] === undefined) {
+					cat[key] = depth;
+				} else if (depth < cat[key]) {
+					cat[key] = depth;
+					// console.log("cat[", category_index ,"] Already visited at depth ", cat[key]," now at", depth, " updating...");
+				} else {
+					// console.log("cat[", category_index ,"] Already visited at depth ", cat[key]," now at", depth, " culling...");
+					culled++;
+					return;
+				}
 
 				var to_consider = [];
 				for (var i=0;i<config.autocracks.length;i++)
@@ -175,7 +217,7 @@ define(function(require, exports, module) {
 
 				//console.log("To consider", to_consider);
 				var p = ckdefs.length;
-				ckdefs.push(null);				
+				ckdefs.push(null);
 				for (var i=0;i<to_consider.length;i++) {
 					inserts[depth] = to_consider[i];	
 					ckdefs[p] = mk_crack(to_consider[i]);
@@ -185,7 +227,7 @@ define(function(require, exports, module) {
 					}
 					if (t) tags[t] = true;
 					run_all(inserts, tags, depth + 1);
-					if (t) tags[t] = false;					
+					if (t) tags[t] = false;
 				}
 			});
 		}

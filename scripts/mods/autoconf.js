@@ -2,7 +2,7 @@ define(function(require, exports, module) {
 	var all_mods = require('./all.js');
 	exports.make_grid = {
         automake: function(cracks, state, output) {
-            var len = state.input.length;            
+            var len = state.input.length;
             for (var i=2;i<100;i++) {
                 if (len%i == 0) {
                     output.push({
@@ -42,7 +42,8 @@ define(function(require, exports, module) {
         },
         check: function(cracks, state) {
             return is_full_grid(state) && cracks[cracks.length-1].type != "transpose";
-        }
+        },
+	  autogrid: exports.make_grid.automake
     },
     exports.pair_sort = {
         automake: function(cracks, state, output) {

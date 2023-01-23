@@ -31,7 +31,7 @@ define(function(require, exports, module) {
 				for (int i = 0; i < cur_in_len; i++) {
 					const char y = cur_in[i] >> 4;
 					const char x = cur_in[i] & 0xf;
-					cur_out[i] = inst->${d.prefix}_map[((y-1)%5) * 5 + ((x-1)%5)];
+					cur_out[i] = inst->${d.prefix}_map[((5+y-1)%5) * 5 + ((5+x-1)%5)];
 				}
 				cur_out_len = cur_in_len;
 			`);

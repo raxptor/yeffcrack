@@ -189,14 +189,14 @@ define(function(require, exports, module) {
 		}
 	}
 
-	function make_pattern_perm(d, update_d_grid_size) {
+	function make_pattern_perm_uncached(d) {
 		var perm = [];
 		var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
 		switch (d.data.mode) {
 			case "RowFlipOdd": {
 				var idx = 0;
 				var row = 0;
-				while (perm.length < d.input.length) {							
+				while (perm.length < d.input.length) {
 					for (var x=0;x<d.grid.width;x++) {
 						if ((row%2) == 0)
 							perm.push(row*d.grid.width + x);
@@ -225,8 +225,6 @@ define(function(require, exports, module) {
 						perm.push(y*d.grid.width + x);
 					}
 				}
-				if (update_d_grid_size)
-					d.grid.width = d.grid.width - 1;
 				break;
 			}
 			case "DiagTranspose0" : {
@@ -236,7 +234,23 @@ define(function(require, exports, module) {
 
 		}
 		return perm;
-	}	
+	}
+
+	function post_pattern_apply(d) {
+		if (d.data.mode == "RmColR") {
+			d.grid.width = d.grid.width - 1;
+		}
+	}
+
+	var pattern_caches = {};
+	function make_pattern_perm(d) {
+		var key = d.grid.width + "/" + d.input.length + "/" + d.data.mode;
+		if (pattern_caches[key] === undefined) {
+			pattern_caches[key] = make_pattern_perm_uncached(d);
+		}
+		return pattern_caches[key];
+	}
+
 	exports.grid_pattern = {
 		create: function(d) { // returns 'data' object
 			return {
@@ -274,7 +288,7 @@ define(function(require, exports, module) {
 		process: function(d) {
 			var output = [];
 			if (d.grid && d.grid.width > 1) {
-				var perm = make_pattern_perm(d, true);
+				var perm = make_pattern_perm(d);
 				if (d.data.inverse) {
 					// regular
 					var output = new Array(d.input);
@@ -294,6 +308,7 @@ define(function(require, exports, module) {
 					}
 				}
 				d.output = output;
+				post_pattern_apply(d);
 			} else {
 				d.output = d.input;
 			}
