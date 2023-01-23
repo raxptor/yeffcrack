@@ -65,6 +65,7 @@ define(function(require, exports, module) {
                         type: "pair_sort",
                         data: {
                             prefixes: "67890",
+                            remove_prefix: true,
                             bycols: false
                         }
                     });
@@ -72,6 +73,7 @@ define(function(require, exports, module) {
                         type: "pair_sort",
                         data: {
                             "prefixes": "67890",
+                            remove_prefix: true,
                             bycols: false
                         }
                     });
@@ -79,6 +81,7 @@ define(function(require, exports, module) {
                         type: "pair_sort",
                         data: {
                             "prefixes": "09876",
+                            remove_prefix: true,
                             bycols: false
                         }
                     });

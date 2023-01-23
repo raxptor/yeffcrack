@@ -787,7 +787,8 @@ define(function(require, exports, module) {
 		create: function() { 
 			return {
 				prefixes: '67890',
-				bycols: false
+				bycols: false,
+				remove_prefix: true
 			}; 
 		},
 		process: function(d) {
@@ -799,10 +800,16 @@ define(function(require, exports, module) {
 				var str = ungroup_number_to_str(d.input[i]);
 				if (str.length > 1) {
 					var idx = d.data.prefixes.indexOf(str.charAt(0));
-					if (idx >= 0 && idx < rows.length)
-						rows[idx].push(d.input[i]);
+					if (idx >= 0 && idx < rows.length) {
+						if (d.data.remove_prefix)
+							rows[idx].push(Number(str.slice(1)));
+						else
+							rows[idx].push(d.input[i]);
+					}
 				}
 			}
+			if (d.data.remove_prefix && d.group_width == 2)
+				delete d.group_width;
 			var output = [];
 			if (d.data.bycols) {
 				for (var i=0;i<d.input.length;i++) {
@@ -821,6 +828,7 @@ define(function(require, exports, module) {
 		make_ui: function(d) {
 			add_input_box(d, "prefixes");
 			add_toggle_ui(d, "bycols", "ReadByCols");
+			add_toggle_ui(d, "remove_prefix", "RemovePrefix");
 		},
 	}
 	exports.cut_half_tb = {

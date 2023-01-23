@@ -66,13 +66,15 @@
 			"type": "remove_characters",
 			"data": {
 				"always_nulls": "67890"
-			}
+			},
+			"unique": "rmchar"
 		},
 		{
 			"type": "remove_characters",
 			"data": {
 				"always_nulls": "12345"
-			}
+			},
+			"unique": "rmchar"
 		}
 	],
 	"analyze_prop": "ic",
