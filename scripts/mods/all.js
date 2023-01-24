@@ -1,5 +1,6 @@
 define(function(require, exports, module) {
 
+	var jim_routes = require("./jimroutes.js");
 	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'stats'];
 
 	function add_toggle_ui(d, prop, label) {
@@ -217,7 +218,30 @@ define(function(require, exports, module) {
 					++row;
 				}
 				break;
-			}			
+			}	
+			case "VertMirror": {
+				for (var y=height-1;y>=0;y--) {
+					for (var x=0;x<d.grid.width;x++) 
+						perm.push(y * d.grid.width + x);
+				}
+				break;
+			}
+			case "SpiralTL": {
+				jim_routes.spiral(perm, d.grid.width, height, 0);
+				break;
+			}
+			case "SpiralTR": {
+				jim_routes.spiral(perm, d.grid.width, height, 1);
+				break;
+			}
+			case "SpiralBR": {
+				jim_routes.spiral(perm, d.grid.width, height, 2);
+				break;
+			}
+			case "SpiralBL": {
+				jim_routes.spiral(perm, d.grid.width, height, 3);
+				break;
+			}
 			case "RmColR": {
 				var idx = 0;
 				for (var y=0;y<height;y++) {
@@ -233,6 +257,8 @@ define(function(require, exports, module) {
 			}
 
 		}
+		if (d.data.reverse)
+			perm = perm.reverse();
 		return perm;
 	}
 
@@ -244,7 +270,7 @@ define(function(require, exports, module) {
 
 	var pattern_caches = {};
 	function make_pattern_perm(d) {
-		var key = d.grid.width + "/" + d.input.length + "/" + d.data.mode;
+		var key = d.grid.width + "/" + d.input.length + "/" + d.data.mode + "/" + d.data.reverse;
 		if (pattern_caches[key] === undefined) {
 			pattern_caches[key] = make_pattern_perm_uncached(d);
 		}
@@ -254,7 +280,8 @@ define(function(require, exports, module) {
 	exports.grid_pattern = {
 		create: function(d) { // returns 'data' object
 			return {
-				mode: "RowFlipOdd"
+				mode: "RowFlipOdd",
+				reverse: false
 			}
 		},
 		make_pattern_perm: make_pattern_perm,
@@ -264,8 +291,13 @@ define(function(require, exports, module) {
 			var opts = {
 				"RowFlipOdd"       : "Reverse odd rows",
 				"HorizMirror"      : "Mirror horizontally",
+				"VertMirror"       : "Mirror vertically",
 				"RmColR"           : "Remove rightmost column",
-				"DiagTranspose0"   : "DiagTranspose"
+				"DiagTranspose0"   : "DiagTranspose",
+				"SpiralTL"         : "SpiralTL",
+				"SpiralTR"         : "SpiralTR",
+				"SpiralBR"         : "SpiralBR",
+				"SpiralBL"         : "SpiralBL"
 			};
 			var cont = [];
 			for (var x in opts) {
@@ -283,6 +315,7 @@ define(function(require, exports, module) {
 			}			
 			d.container.appendChild(selectList);
 			add_inverse_ui(d);
+			add_toggle_ui(d, "reverse", "Reversed");
 		},
 		title: "Grid Pattern",
 		process: function(d) {
