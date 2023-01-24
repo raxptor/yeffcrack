@@ -95,8 +95,8 @@ define(function(require, exports, module) {
 				if (prop < config.eval_min || prop > config.eval_max) {
 					bad_eval++;
 				} else {
+					db_inserts++;
 					if (!dry_run) {
-						db_inserts++;
 						prep.run([txt, txt.length, prop, penalty, JSON.stringify(ckdefs)], function(err) {
 							if (err) { console.error(err); db_err++; } else db_ok++;
 						});
