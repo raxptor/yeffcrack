@@ -18,15 +18,15 @@
 			"data": {
 				"mode": "RowFlipOdd"
 			}
-		}
-	],	
-	"cracks_fixed_end":[
+		},
 		{
 			"type":"group_up",
 			"data": {
 				"width": 2
 			}
-		},	
+		}		
+	],	
+	"cracks_fixed_end":[
 		{
 			"type":"polybius"
 		},
@@ -34,27 +34,9 @@
 			"type":"stats"
 		}
 	],
-	"autocracks": ["pair_sort", "make_grid", "group_up", "transpose"],
+	"autocracks": ["make_grid", "group_up", "transpose", "complete_spirals"],
+	"autocracks_unused": ["pair_sort"],
 	"cracks_insert_IGNORE THESE": [
-		{
-			"type": "rail_fence",
-			"data": {
-				"width": 3
-			}
-		},
-		{
-			"type": "rail_fence",
-			"data": {
-				"width": 5
-			}
-		},		
-		{
-			"type": "remove_characters",
-			"data": {
-				"always_nulls": "67890"
-			},
-			"unique": "rmchar"
-		},
 		{
 			"type": "remove_characters",
 			"data": {
@@ -74,70 +56,6 @@
 		{
 			"type":"grid_pattern",
 			"data": {
-				"mode": "SpiralTL",
-				"inverse": false,
-				"reverse": false
-			}
-		},
-		{
-			"type":"grid_pattern",
-			"data": {
-				"mode": "SpiralTR",
-				"inverse": false,
-				"reverse": false
-			}
-		},
-		{
-			"type":"grid_pattern",
-			"data": {
-				"mode": "SpiralBR",
-				"inverse": false,
-				"reverse": false
-			}
-		},
-		{
-			"type":"grid_pattern",
-			"data": {
-				"mode": "SpiralBL",
-				"inverse": false,
-				"reverse": false
-			}
-		},
-		{
-			"type":"grid_pattern",
-			"data": {
-				"mode": "SpiralTL",
-				"inverse": false,
-				"reverse": true
-			}
-		},
-		{
-			"type":"grid_pattern",
-			"data": {
-				"mode": "SpiralTR",
-				"inverse": false,
-				"reverse": true
-			}
-		},
-		{
-			"type":"grid_pattern",
-			"data": {
-				"mode": "SpiralBR",
-				"inverse": false,
-				"reverse": true
-			}
-		},
-		{
-			"type":"grid_pattern",
-			"data": {
-				"mode": "SpiralBL",
-				"inverse": false,
-				"reverse": true
-			}
-		},
-		{
-			"type":"grid_pattern",
-			"data": {
 				"mode": "HorizMirror"
 			}
 		},
@@ -151,6 +69,30 @@
 			"type":"grid_pattern",
 			"data": {
 				"mode": "RowFlipOdd"
+			}
+		},
+		{
+			"type": "rail_fence",
+			"data": {
+				"width": 2
+			}
+		},
+		{
+			"type": "rail_fence",
+			"data": {
+				"width": 3
+			}
+		},		
+		{
+			"type": "rail_fence",
+			"data": {
+				"width": 3
+			}
+		},
+		{
+			"type": "rail_fence",
+			"data": {
+				"width": 4
 			}
 		}
 	],

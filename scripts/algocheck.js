@@ -54,6 +54,7 @@ define(function(require, exports, module) {
 					on_result(d);
 				} else {
 					console.log("Pause...");
+					on_result(d);
 					/*setTimeout(function() {
 						on_result(d);
 					}, 100);*/
@@ -84,9 +85,9 @@ define(function(require, exports, module) {
 			}
 
 			var txt = d.output.join('');
-			if (txt.length > 30 && !added[d.output]) {
+			if (txt.length > 30 && !added[txt]) {
 				//console.log(txt, config.analyze_prop, "=", prop, ckdefs);
-				added[d.output] = true;	
+				added[txt] = true;	
 				uniq_count++;
 				var penalty = util.compute_penalty(txt);
 				if (penalty > 1000000) {
@@ -124,9 +125,9 @@ define(function(require, exports, module) {
 			if (depth == (depth_end+1)) {
 				for (var i=0;i<end.length;i++) {
 					ckdefs.push(mk_crack(end[i]));
-				}
-				// console.log("Running cracks with end", ckdefs);
+				}						
 				run_cracks(ckdefs, function(d) {
+				//console.log("Running cracks with end", ckdefs);				
 					on_output(d, ckdefs)
 				});
 				return;

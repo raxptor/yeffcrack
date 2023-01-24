@@ -3,7 +3,7 @@ define(function(require, exports, module) {
 	exports.make_grid = {
         automake: function(cracks, state, output) {
             var len = state.input.length;
-            for (var i=2;i<100;i++) {
+            for (var i=3;i<100;i++) {
                 if (len%i == 0) {
                     output.push({
                         type: "make_grid",
@@ -92,7 +92,7 @@ define(function(require, exports, module) {
         check: function(cracks, state) {
             return state.group_width == 2;
         }
-    }    
+    }      
     exports.group_up = {
         automake: function(cracks, state, output) {
             if (state.group_width === undefined) {
@@ -107,5 +107,29 @@ define(function(require, exports, module) {
         check: function(cracks, state) {
             return state.group_width === undefined;
         }
-    }    
+    }   
+    exports.complete_spirals = {
+        automake: function(cracks, state, output) {
+            if (is_full_grid(state)) {
+                var spirals = ["SpiralTL", "SpiralTR", "SpiralBR", "SpiralBL"];
+                var old = output.length;
+                for (var i=0;i<spirals.length;i++) {
+                    for (var m=0;m<4;m++) {
+                        output.push({
+                            type: "grid_pattern",
+                            data: {
+                                mode: spirals[i],
+                                inverse: (m%2 == 0),
+                                reverse: (m >=2),
+                                unique: "spiral"
+                            }
+                        });
+                    }
+                }
+            }
+        },
+        check: function(cracks, state) {
+            return is_full_grid(state);
+        }
+    }      
 });
