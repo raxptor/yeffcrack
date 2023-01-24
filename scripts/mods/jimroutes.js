@@ -21,12 +21,12 @@ define(function(require, exports, module) {
 		var steps = diameter;
 		var count = 0;
 		var done = false;
-		for (var w=0;w<4;w++)
+		for (var w=0;w<diameter;w++)
 		{
-			console.log("I start spiral (", rs0, " ", rs1, ") steps=" + steps + " at ", x0, y0, " dim=", rs0, rs1);
+			//console.log("I start spiral (", rs0, " ", rs1, ") steps=" + steps + " at ", x0, y0, " dim=", rs0, rs1);
 			for (var runs=0;runs<4;runs++)
 			{
-				console.log("My direction is ", dx, dy, " with run lengths ", rs0, rs1);
+				//console.log("My direction is ", dx, dy, " with run lengths ", rs0, rs1);
 				var run_length;
 				switch (runs) {
 					case 0: run_length = rs0; break;
@@ -35,7 +35,7 @@ define(function(require, exports, module) {
 					case 3: run_length = rs0 - 2; break;
 				}
 				if (run_length <= 0) {
-					console.log("DONE");
+					//console.log("DONE");
 					done = true;
 					break;
 				}
@@ -44,7 +44,7 @@ define(function(require, exports, module) {
 					x0 += dx;
 					y0 += dy;
 					var idx = y0 * width + x0;
-					console.log("aaah" ,x0, y0);
+					//console.log("aaah" ,x0, y0);
 					perm.push(idx);
 					++count;
 				}
@@ -64,6 +64,7 @@ define(function(require, exports, module) {
 		}
 		if (perm.length != width*height) {
 			console.error("ERROR in spiral for ", width, height, rot);
+			console.error("Perm length=", perm, " but expected", width*width);
 		}
 	}
 });
