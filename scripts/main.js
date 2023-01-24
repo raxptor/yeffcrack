@@ -355,4 +355,17 @@ define(function(require, exports, module) {
 		}
 		document.fn_rebuild();
 	};
+
+	exports.load_steps = function(steps) {
+		for (var i=0;i<steps.length;i++) {
+			steps[i].enabled = true;
+		}
+		steps.push({
+			type: "output",
+			enabled: true
+		});
+		location.hash = serialize(steps);
+		this.startup();
+	}
+
 });

@@ -9,11 +9,11 @@ const db = new sqlite3.Database(conf.database, (err) => {
 		exit(-1);
 	} else {
 		bulk.bucket_size = 2;
-		bulk.num_buckets = 6;
-		bulk.crack_it(db, "SELECT uncracked, abs(eval-650) as ic_diff, length, freq_rating from decrypt WHERE cracked is NULL ORDER BY is_test_data ASC, coalesce(freq_rating, 1000000) ASC, ic_diff ASC", "subst", function(cipher, r) {
-			if (r.quadgram_rating && r.cracked) {
+		bulk.num_buckets = 4;
+		bulk.crack_it(db, "SELECT uncracked, abs(eval-" + conf.prio_eval + ") as eval_diff, length, freq_rating from decrypt WHERE cracked is NULL ORDER BY eval_diff ASC, penalty ASC, freq_rating ASC", "subst", function(cipher, r) {
+			if (r.quadgram_rating && r.cracked && r.alphabet) {
 				console.log(r);
-				db.run("UPDATE decrypt SET quadgram_rating = ?, cracked = ? WHERE uncracked = ? AND (quadgram_rating IS NULL OR quadgram_rating < ?)", [r.quadgram_rating, r.cracked, cipher, r.quadgram_rating], function(err) {
+				db.run("UPDATE decrypt SET quadgram_rating = ?, cracked = ?, alphabet = ? WHERE uncracked = ? AND (quadgram_rating IS NULL OR quadgram_rating < ?)", [r.quadgram_rating, r.cracked, r.alphabet, cipher, r.quadgram_rating], function(err) {
 					if (err) {
 						console.error("DB err=", err);
 					}

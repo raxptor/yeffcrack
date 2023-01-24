@@ -8,6 +8,7 @@ const db = new sqlite3.Database(conf.database, (err) => {
 		console.log("Failed to open database.");
 		exit(-1);
 	} else {
+		db.run("pragma synchronous=0");
 		bulk.bucket_size = 256;
 		bulk.num_buckets = 32;
 		bulk.crack_it(db, "SELECT uncracked FROM decrypt WHERE freq_rating is NULL", "freq", function(cipher, r) {
@@ -21,7 +22,3 @@ const db = new sqlite3.Database(conf.database, (err) => {
 		});
 	}
 });
-
-
-
-

@@ -3,9 +3,9 @@ CREATE TABLE IF NOT EXISTS "decrypt" (
 	"uncracked"	TEXT NOT NULL,
 	"eval"	NUMERIC NOT NULL,
 	"length"	INTEGER NOT NULL,
-	"trigram_rating"	NUMERIC,
 	"quadgram_rating"	NUMERIC,
 	"cracked"	TEXT,
+	"alphabet"	TEXT,
 	"steps"	TEXT,
 	"freq_rating"	INTEGER,
 	"is_test_data"	INTEGER DEFAULT 0,
@@ -17,5 +17,8 @@ CREATE INDEX IF NOT EXISTS "decrypt_eval" ON "decrypt" (
 );
 CREATE INDEX IF NOT EXISTS "decrypt_len" ON "decrypt" (
 	"length"
+);
+CREATE INDEX IF NOT EXISTS "decrypt_quadgram" ON "decrypt" (
+	"quadgram_rating"	DESC
 );
 COMMIT;

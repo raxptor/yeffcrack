@@ -11,31 +11,6 @@ define(function(require, exports, module) {
 		var end = config.cracks_fixed_end;
 		var dry_run = this.dry_run;
 
-		function is_junk(result) {
-			var last = 0;
-			var rl = 0;
-			var trips = 0;
-			var quads = 0;
-			var octas = 0;
-			for (var i=0;i<result.length;i++) {
-				if (result[i] != last) {
-					last = result[i];
-					rl = 0;
-				} else {
-					++rl;
-					if (rl == 3) trips++;
-					if (rl == 4) quads++;
-					if (rl == 8) octas++;
-				}
-			}
-
-			if (trips > 2 || quads > 1 || octas > 0)  {
-				//console.log("This is junk ", result.join(''));
-				return true;
-			}
-			return false;
-		}
-
 		function mk_crack(def) {
 			var ck = {
 				type: def.type,
@@ -53,7 +28,7 @@ define(function(require, exports, module) {
 		var errors = 0;
 		var pause = 0;
 
-		var prep = db.prepare("INSERT OR IGNORE INTO decrypt (uncracked, length, eval, steps) VALUES (?, ?, ?, ?)");
+		var prep = db.prepare("INSERT OR IGNORE INTO decrypt (uncracked, length, eval, penalty, steps) VALUES (?, ?, ?, ?, ?)");
 
 		function run_cracks(cracks, on_result) {
 			var d = { input: "" };
@@ -96,6 +71,8 @@ define(function(require, exports, module) {
 		var junk_count = 0;
 		var normdupes_count = 0;
 		var culled = 0;		
+		var db_ok=0, db_err = 0;
+		var db_inserts = 0;
 
 		function on_output(d, ckdefs) {
 			var prop = d[config.analyze_prop];
@@ -103,7 +80,7 @@ define(function(require, exports, module) {
 				prop = Math.floor(prop);
 
 			if (((++total_count) % 1000) == 0) {
-				console.log(`Processed ${total_count} variants with ${uniq_count} unique outputs, ${bad_eval} junk, ${junk_count} garbage. Culled trees=${culled}`);
+				console.log(`Processed ${total_count} variants with ${uniq_count} unique outputs, ${bad_eval} bad ${config.analyze_prop}, ${junk_count} junk. Culled trees=${culled} => Inserts:${db_inserts} OK:${db_ok} Err:${db_err}`);
 			}
 
 			var txt = d.output.join('');
@@ -111,22 +88,19 @@ define(function(require, exports, module) {
 				//console.log(txt, config.analyze_prop, "=", prop, ckdefs);
 				added[d.output] = true;	
 				uniq_count++;
-				if (is_junk(txt)) {
+				var penalty = util.compute_penalty(txt);
+				if (penalty > 1000000) {
 					junk_count++;
+				}
+				if (prop < config.eval_min || prop > config.eval_max) {
+					bad_eval++;
 				} else {
-					if (prop < config.eval_min || prop > config.eval_max) {
-						bad_eval++;
-					} else {
-						if (!dry_run)
-							prep.run([txt, txt.length, prop, JSON.stringify(ckdefs)]);
+					if (!dry_run) {
+						db_inserts++;
+						prep.run([txt, txt.length, prop, penalty, JSON.stringify(ckdefs)], function(err) {
+							if (err) { console.error(err); db_err++; } else db_ok++;
+						});
 					}
-	
-					/*
-					var n = util.normalize(txt);
-					if (normalized[n] !== undefined)
-						normdupes_count++;
-					normalized[n] = true;
-					*/
 				}
 			}
 		}

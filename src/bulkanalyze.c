@@ -132,7 +132,7 @@ void bulk_analyze_subst(const char *buf)
 		}
 		else
 		{
-			if (++failures > 5000) {
+			if (++failures > 3000) {
 				cur_score = 0;
 				for (int i = 0; i < 20; i++)
 				{
@@ -154,5 +154,5 @@ void bulk_analyze_subst(const char *buf)
 
 	printf("\"%s\": { \"cracked\": \"", buf);
 	print_crack(stdout, best, buf, len);
-	printf("\", \"quadgram_rating\": \"%d\" }\n", best_score);
+	printf("\", \"quadgram_rating\": \"%d\", \"alphabet\": \"%s\" }\n", best_score, best);
 }

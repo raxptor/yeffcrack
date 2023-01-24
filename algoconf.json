@@ -1,5 +1,5 @@
 {
-	"database": "mega-5.sqlite3",
+	"database": "penalty.sqlite3",
 	"cracks_fixed_begin":[
 		{
 			"type":"input",
@@ -77,8 +77,9 @@
 			"unique": "rmchar"
 		}
 	],
-	"eval_min": 420,
-	"eval_max": 750,
+	"eval_min": 510,
+	"eval_max": 720,
 	"analyze_prop": "ic",
-	"max_depth": 5
+	"prio_eval": 650,
+	"max_depth": 4
 }

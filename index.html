@@ -9,9 +9,16 @@
     <script>
     require(['scripts/main.js'], function(main) {
         main.startup();        
+	  document.load_steps = function() {
+	    var d = JSON.parse(prompt("Enter from steps column"));
+	    if (d == undefined)
+	    	alert("Not valid JSON");
+	    else
+	      main.load_steps(d)
+    }	  
     });
     </script>    
-YeffCrack
+YeffCrack <button onclick="javascript:load_steps();">Load steps</button>
 <x-cracks-list id="cracks-list">
 
 </x-cracks-list>
