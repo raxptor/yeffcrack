@@ -95,8 +95,8 @@ void eval_perm_complete(ColSubstCrack* ck)
 	memset(finU, '?', ck->length);
 	memset(finT, '?', ck->length);
 	for (int i = 0; i < ck->length; i++) {
-		finU[ck->outputOrder[i]] = bufU[i];
-		finT[ck->outputOrder[i]] = bufT[i];
+		finU[i] = bufU[ck->outputOrder[i]];
+		finT[i] = bufT[ck->outputOrder[i]];
 	}
 	// Now we have some options to consider.
 	finU[ck->length] = 0;
