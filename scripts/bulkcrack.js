@@ -8,7 +8,8 @@ exports.crack_it = function(db, select, method, process) {
 	function more() {
 		var num_buckets = exports.num_buckets;
 		var num_each = exports.bucket_size;
-		var sql2 = select + " LIMIT " + (num_buckets*num_each);
+		var multiplier = 32;
+		var sql2 = select + " LIMIT " + (multiplier*num_buckets*num_each);
 		db.all(sql2, function(err, rows) {
 			if (err) {
 				console.log(sql2, err);
@@ -19,12 +20,12 @@ exports.crack_it = function(db, select, method, process) {
 				return;
 			}
 			var buckets = [];
-			for (var q=0;q<num_buckets;q++)
-			buckets.push([]);				
+			for (var q=0;q<num_buckets*multiplier;q++)
+				buckets.push([]);				
 			for (var i=0;i<rows.length;i++)
 				buckets[i%buckets.length].push(rows[i]);
 			// Parallel.
-			async.each(buckets, function(task, cb) {
+			async.eachLimit(buckets, num_buckets, function(task, cb) {
 				console.log("Launching task with ", task.length, " entries for method ", method);
 				let binpath = `c:\\users\\dan\\source\\repos\\yeffcrack\\release\\yeffcrack.exe`;
 				let script = child_process.execFile(binpath, ["--stdin-analyze", method], {}, function(err, out, stderr) {
@@ -32,7 +33,7 @@ exports.crack_it = function(db, select, method, process) {
 					var results = JSON.parse(out);
 					for (var cipher in results) {
 						var r = results[cipher];
-						process(cipher, r);
+						process(cipher, r, r.meta_transposition_order);
 					}
 					console.log("Processed", Object.keys(results).length, "items");
 					cb();

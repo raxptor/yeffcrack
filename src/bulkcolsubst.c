@@ -84,7 +84,7 @@ void eval_perm_complete(ColSubstCrack* ck)
 	// Ciphertext is taken out by columns.
 	for (int i = 0; i < ck->width; i++) {
 		int src_col = ck->perm[i];
-		int src_offset = ck->perm[i] * ck->width; // stored by column in the source, 
+		int src_offset = ck->perm[i] * rows; // stored by column in the source, 
 		for (int j = 0; j < rows; j++) {
 			// We write both options, with input written by columns or not.
 			bufU[j * ck->width + i] = ck->inputBuffer[j * ck->width + src_col];
@@ -92,6 +92,8 @@ void eval_perm_complete(ColSubstCrack* ck)
 		}
 	}
 	
+	memset(finU, '?', ck->length);
+	memset(finT, '?', ck->length);
 	for (int i = 0; i < ck->length; i++) {
 		finU[ck->outputOrder[i]] = bufU[i];
 		finT[ck->outputOrder[i]] = bufT[i];
@@ -110,7 +112,8 @@ void eval_perm_complete(ColSubstCrack* ck)
 		ck->penalties[i0] = compute_penalty(finU, ck->length);
 		ck->penalties[i1] = compute_penalty(finT, ck->length);
 	}
-	// printf("%s -> %d\n", finU, compute_penalty(finU, ck->length));
+	//printf("%s -> %d\n", finU, compute_penalty(finU, ck->length));
+	//printf("%s -> %d\n", finT, compute_penalty(finT, ck->length));
 }
 
 void enum_perm(ColSubstCrack* ck, int depth)
@@ -160,12 +163,13 @@ void try_columns(ColSubstCrack* ck, int width, int divider)
 
 	MTRand rnd = seedRand(0x8fe2d2c0);
 	//printf("I have %d results to analyze...\n", ck->result_count);
+	//printf("Source is %s\n,", ck->inputBuffer);
 	int check_count = ck->result_count / divider;
 	for (int i = 0; i < check_count; i++) {
 		//printf("%d (%d)", i, entries[i].penalty);
 		char* str = ck->results + ck->result_width * entries[i].index;
 		str[ck->length] = 0;
-		//printf("%d => %d with %s => ", entries[i].index, entries[i].penalty, str);
+		//printf("%d => %d with %s =>\n", entries[i].index, entries[i].penalty, str);
 		char alphabet[26];
 		int eval = quick_subst_eval(str, &rnd, alphabet);
 		//printf(" eval %d\n", eval);
@@ -178,6 +182,7 @@ void try_columns(ColSubstCrack* ck, int width, int divider)
 			ck->best_text[ck->length] = 0;
 			/*
 			printf("\n\nNew best rating: %d ==> ", eval);
+			for (int i = 0; i < ck->length; i++)
 				printf("%c", alphabet[str[i] - 'A']);
 			printf("\n");
 			*/
@@ -218,15 +223,18 @@ void bulk_analyze_colsubst(const char* buf, const char* orderBuf)
 	csc.outputOrder = order;
 	strcpy(csc.best_alphabet, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
+	try_columns(&csc, 4, 1);
+	/*
 	for (int w = 2; w < 8; w++) {
 		if ((txtLen % w) == 0) {
 			//printf("Column width %d is viable. (%d)\n", w, txtLen);
-			int divider = 100;
+			int divider = 4;
 			if (w <= 4) divider = 1;
 			try_columns(&csc, w, divider);
 		}
 	}
+	*/
 	
 	printf("\"%s\": { \"cracked\": \"%s", buf, csc.best_text);	
-	printf("\", \"quadgram_rating\": \"%d\", \"best_width\": %d, \"alphabet\": \"%s\" }\n", csc.best_rating, csc.best_width, csc.best_alphabet);
+	printf("\", \"quadgram_rating\": \"%d\", \"meta_transposition_order\": \"%s\", \"best_width\": %d, \"alphabet\": \"%s\" }\n", csc.best_rating, orderBuf, csc.best_width, csc.best_alphabet);
 }
