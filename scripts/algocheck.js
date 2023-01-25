@@ -65,12 +65,13 @@ define(function(require, exports, module) {
 		}
 
 		var added = {};
+		var added_norm = {};
 		var normalized = {};
 		var total_count = 0;
 		var bad_eval = 0;
 		var uniq_count = 0;
 		var junk_count = 0;
-		var normdupes_count = 0;
+		var norm_dupes = 0;
 		var culled = 0;		
 		var db_ok=0, db_err = 0;
 		var db_inserts = 0;
@@ -81,13 +82,21 @@ define(function(require, exports, module) {
 				prop = Math.floor(prop);
 
 			if (((++total_count) % 1000) == 0) {
-				console.log(`Processed ${total_count} variants with ${uniq_count} unique outputs, ${bad_eval} bad ${config.analyze_prop}, ${junk_count} junk. Culled trees=${culled} => Inserts:${db_inserts} OK:${db_ok} Err:${db_err}`);
+				console.log(`Processed ${total_count} variants with ${uniq_count} unique outputs (${norm_dupes} norm dupes), ${bad_eval} bad ${config.analyze_prop}, ${junk_count} junk. Culled trees=${culled} => Inserts:${db_inserts} OK:${db_ok} Err:${db_err}`);
 			}
 
 			var txt = d.output.join('');
 			if (txt.length > 30 && !added[txt]) {
 				//console.log(txt, config.analyze_prop, "=", prop, ckdefs);
 				added[txt] = true;	
+
+				var norm = util.normalize(txt);
+				if (added_norm[norm]) {
+					norm_dupes++;
+				} else {
+					added_norm[norm] = true;
+				}
+
 				uniq_count++;
 				var penalty = util.compute_penalty(txt);
 				if (penalty > 1000000) {
@@ -164,8 +173,9 @@ define(function(require, exports, module) {
 				{
 					var ck = config.autocracks[i];
 					if (!autoconf[ck] || !autoconf[ck].automake) {
+						console.log(ck, " has no automake");
 						continue;
-					}
+					}					
 					if (autoconf[ck].check && !autoconf[ck].check(ckdefs, d)) {
 						continue;
 					}
@@ -175,11 +185,6 @@ define(function(require, exports, module) {
 
 				for (var i=0;i<config.cracks_insert.length;i++)
 				{
-					var t = config.cracks_insert[i].unique;
-					if (t && tags[t]) {
-						// console.log("Skipping because tag", t);
-						continue;
-					}
 					var auto = autoconf[config.cracks_insert[i].type];
 					if (auto) {
 						if (auto.check && !auto.check(ckdefs, d)) {
@@ -198,7 +203,7 @@ define(function(require, exports, module) {
 					ckdefs[p] = mk_crack(to_consider[i]);
 					var t = to_consider[i].unique;
 					if (t && tags[t]) {
-						throw new "Tag " + t + " already set.";
+						continue;
 					}
 					if (t) tags[t] = true;
 					run_all(inserts, tags, depth + 1);

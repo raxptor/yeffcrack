@@ -107,7 +107,20 @@ define(function(require, exports, module) {
         check: function(cracks, state) {
             return state.group_width === undefined;
         }
-    }   
+    }
+    exports.meta_transposition = {
+	automake: function(cracks, state, output) {
+		output.push({
+			type: "meta_transposition",
+			data: {
+				width: 2
+			}
+		  });
+	},
+	check: function(cracks, state) {
+		return state.group_width == 2;
+	}
+    }
     exports.complete_spirals = {
         automake: function(cracks, state, output) {
             if (is_full_grid(state)) {
@@ -121,8 +134,8 @@ define(function(require, exports, module) {
                                 mode: spirals[i],
                                 inverse: (m%2 == 0),
                                 reverse: (m >=2),
-                                unique: "spiral"
-                            }
+                            },
+				    unique: "spiral"
                         });
                     }
                 }

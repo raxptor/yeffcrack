@@ -1,7 +1,8 @@
 define(function(require, exports, module) {
+	
 
 	var jim_routes = require("./jimroutes.js");
-	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'stats'];
+	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'meta_transposition', 'stats'];
 
 	function add_toggle_ui(d, prop, label) {
 		var inverse = document.createElement('input');
@@ -633,6 +634,10 @@ define(function(require, exports, module) {
 							tmp.push(v);
 					}
 					d.ui.textContent = tmp.join('');
+
+					if (d.meta_transposition_order) {
+						d.ui.textContent += "\n\nMetaTranspositionOrder:" + d.meta_transposition_order.join(' ');
+					}
 				}
 			}
 		},
@@ -738,6 +743,36 @@ define(function(require, exports, module) {
 		return order;
 	};
 
+	exports.meta_transposition = {
+		create: function() { 
+			return {
+			}; 
+		},
+		process: function(d) {
+			if (d.group_width !== 2) {
+				d.error = "Group width isn't 2";
+				d.output = d.input;
+			} else {
+				// We make outputs that say which column and row it is.
+				var width = d.data.width;
+				// We set up the input order here.
+				var output = [];
+				var transp_source = [];
+				for (var i=0;i<d.input.length;i++) {
+					output.push(i);
+				}
+				do_polybius_subst(transp_source, d.input, "ABCDEFGHIKLMNOPQRSTUVWXYZ") ;
+				d.group_width = -1; // Magic for coltransp indices.
+				d.meta_transposition_source = d.input;
+				d.output = output;
+				// console.log("MetaTransposition source=", d.meta_transposition_source, " output=",d.output)
+			}
+		},
+		make_ui: function(d) {
+		},
+		title: "Meta Transposition"
+	}
+
 	exports.coltransp = {
 		create: function() { 
 			return {
@@ -782,20 +817,7 @@ define(function(require, exports, module) {
 			d.container.appendChild(fixed);
 
 			add_inverse_ui(d);
-
-			var double = document.createElement('input');
-			double.type = "checkbox";
-			double.checked = d.data.double;
-			double.onchange = function() {
-				d.data.double = double.checked;
-				document.fn_reprocess();
-			}
-			d.container.appendChild(double);
-
-			var s2 = document.createElement('span');
-			s2.textContent = 'Double';
-			d.container.appendChild(s2);
-
+			add_toggle_ui(d, "double", "Double");
 
 			var ta = document.createElement('x-grid');
 			d.container.appendChild(ta);
@@ -917,6 +939,21 @@ define(function(require, exports, module) {
 		}
 		return real;
 	}
+	function do_polybius_subst(out, input, real, indices) {
+		for (var i=0;i<input.length;i++) {
+			var a = Math.floor(input[i] / 10) % 10;
+			var b = input[i] % 10;
+			var y = (5+a-1) % 5;
+			var x = (5+b-1) % 5;
+			var c = y*5+x;
+			if (c >= 0 && c < 25) {
+				if (indices !== undefined)
+					indices.push(c);
+				out.push(real[c]);
+			}
+		}
+	}
+
 	exports.polybius = {
 		create: function() { 
 			return {
@@ -928,19 +965,25 @@ define(function(require, exports, module) {
 		process: function(d) {
 			var out = [];
 			var indices = [];
+
+			// These are meta columnar transposition values that we need to translate into indices.
+			// After that we undo the meta and get back what we would have had without it.
+			if (d.group_width === -1) {
+				var order_source = [];
+				var hex = "0123456789ABCDEF";
+				var real_input = [];
+				for (var i=0;i<d.input.length;i++) {
+					var idx = d.input[i] % 10000;
+					order_source.push(idx);
+					real_input.push(d.meta_transposition_source[idx]);
+				}
+				d.meta_transposition_order = order_source;
+				d.input = real_input;
+			}
+
 			var real = make_polyb_subst(d);
 			if (!d.data.inverse) {
-				for (var i=0;i<d.input.length;i++) {
-					var a = Math.floor(d.input[i] / 10) % 10;
-					var b = d.input[i] % 10;
-					var y = (5+a-1) % 5;
-					var x = (5+b-1) % 5;
-					var c = y*5+x;
-					if (c >= 0 && c < 25) {
-						indices.push(c);
-						out.push(real[c]);
-					}
-				}
+				do_polybius_subst(out, d.input, real, indices);
 			} else {
 				// encrypt
 				for (var i=0;i<d.input.length;i++) {
