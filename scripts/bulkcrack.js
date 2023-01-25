@@ -29,11 +29,11 @@ exports.crack_it = function(db, select, method, process) {
 				console.log("Launching task with ", task.length, " entries for method ", method);
 				let binpath = `c:\\users\\dan\\source\\repos\\yeffcrack\\release\\yeffcrack.exe`;
 				let script = child_process.execFile(binpath, ["--stdin-analyze", method], {}, function(err, out, stderr) {
-					console.log(out);
 					var results = JSON.parse(out);
+					console.log("The result is", results);
 					for (var cipher in results) {
 						var r = results[cipher];
-						process(cipher, r, r.meta_transposition_order);
+						process(cipher, r, r.meta_transposition_order);						
 					}
 					console.log("Processed", Object.keys(results).length, "items");
 					cb();

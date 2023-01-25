@@ -95,8 +95,8 @@ void eval_perm_complete(ColSubstCrack* ck)
 	memset(finU, '?', ck->length);
 	memset(finT, '?', ck->length);
 	for (int i = 0; i < ck->length; i++) {
-		finU[ck->outputOrder[i]] = bufU[i];
-		finT[ck->outputOrder[i]] = bufT[i];
+		finU[i] = bufU[ck->outputOrder[i]];
+		finT[i] = bufT[ck->outputOrder[i]];
 	}
 	// Now we have some options to consider.
 	finU[ck->length] = 0;
@@ -223,8 +223,6 @@ void bulk_analyze_colsubst(const char* buf, const char* orderBuf)
 	csc.outputOrder = order;
 	strcpy(csc.best_alphabet, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
-	try_columns(&csc, 4, 1);
-	/*
 	for (int w = 2; w < 8; w++) {
 		if ((txtLen % w) == 0) {
 			//printf("Column width %d is viable. (%d)\n", w, txtLen);
@@ -233,7 +231,6 @@ void bulk_analyze_colsubst(const char* buf, const char* orderBuf)
 			try_columns(&csc, w, divider);
 		}
 	}
-	*/
 	
 	printf("\"%s\": { \"cracked\": \"%s", buf, csc.best_text);	
 	printf("\", \"quadgram_rating\": \"%d\", \"meta_transposition_order\": \"%s\", \"best_width\": %d, \"alphabet\": \"%s\" }\n", csc.best_rating, orderBuf, csc.best_width, csc.best_alphabet);
