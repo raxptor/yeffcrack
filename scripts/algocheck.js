@@ -27,8 +27,8 @@ define(function(require, exports, module) {
 
 		var errors = 0;
 		var pause = 0;
-
-		var prep = db.prepare("INSERT OR IGNORE INTO decrypt (uncracked, length, eval, penalty, steps) VALUES (?, ?, ?, ?, ?)");
+		
+		var prep = db.prepare("INSERT OR IGNORE INTO decrypt (uncracked, meta_transposition_order, length, eval, penalty, steps) VALUES (?, ?, ?, ?, ?, ?)");
 
 		function run_cracks(cracks, on_result) {
 			var d = { input: "" };
@@ -86,9 +86,15 @@ define(function(require, exports, module) {
 			}
 
 			var txt = d.output.join('');
-			if (txt.length > 30 && !added[txt]) {
-				//console.log(txt, config.analyze_prop, "=", prop, ckdefs);
-				added[txt] = true;	
+			var key;
+			if (d.meta_transposition_order)
+				key = txt + "/" + d.meta_transposition_order.join();
+			else
+				key = txt;
+			
+			if (txt.length > 30 && !added[key]) {
+				console.log(txt, config.analyze_prop, "=", prop);
+				added[key] = true;	
 
 				var norm = util.normalize(txt);
 				if (added_norm[norm]) {
@@ -107,8 +113,12 @@ define(function(require, exports, module) {
 				} else {
 					db_inserts++;
 					if (!dry_run) {
-						prep.run([txt, txt.length, prop, penalty, JSON.stringify(ckdefs)], function(err) {
+						var meta_transp_key = null;
+						if (d.meta_transposition_order)
+							meta_transp_key = d.meta_transposition_order.join(',');
+						prep.run([txt, meta_transp_key, txt.length, prop, penalty, JSON.stringify(ckdefs)], function(err) {
 							if (err) { console.error(err); db_err++; } else db_ok++;
+							console.log("inserted");
 						});
 					}
 				}
@@ -124,23 +134,19 @@ define(function(require, exports, module) {
 				inserts[depth] = mk_crack(begin[depth]);
 				run_all(inserts, tags, depth + 1);
 				return;
-			} 
-			// Run the cracks up to this point.
-			var ckdefs = [];
-			for (var i=0;i<depth;i++) {
-				ckdefs.push(mk_crack(inserts[i]));
 			}
 
-			if (depth == (depth_end+1)) {
-				for (var i=0;i<end.length;i++) {
-					ckdefs.push(mk_crack(end[i]));
-				}						
-				run_cracks(ckdefs, function(d) {
-				//console.log("Running cracks with end", ckdefs);				
-					on_output(d, ckdefs)
-				});
-				return;
+			// Run the cracks up to this point.
+			var ckdefs = [];
+			var ckdefs_full = [];
+			for (var i=0;i<depth;i++) {
+				var c = mk_crack(inserts[i]);
+				ckdefs.push(c);
+				ckdefs_full.push(c);
 			}
+			for (var i=0;i<end.length;i++) {
+				ckdefs_full.push(mk_crack(end[i]));
+			}			
 
 			//console.log("eval base", ckdefs);
 			run_cracks(ckdefs, function(d) {
@@ -157,6 +163,9 @@ define(function(require, exports, module) {
 				}
 				var cat = visit_cat[category_index];
 				var key = d.input.join('');
+				if (d.meta_transposition_order)
+					key += + "/" + d.meta_transposition_order.join(',');
+
 				if (cat[key] === undefined) {
 					cat[key] = depth;
 				} else if (depth < cat[key]) {
@@ -167,6 +176,15 @@ define(function(require, exports, module) {
 					culled++;
 					return;
 				}
+
+				// now run it for real.
+				run_cracks(ckdefs_full, function(d) {
+					on_output(d, ckdefs_full);
+				});
+				
+				// no more.
+				if (depth == (depth_end+1))
+					return;
 
 				var to_consider = [];
 				for (var i=0;i<config.autocracks.length;i++)

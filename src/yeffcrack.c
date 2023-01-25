@@ -46,6 +46,11 @@ void call_analyze(char *name, const char*buf)
 		bulk_analyze_freq(buf);
 	if (!strcmp(name, "subst"))
 		bulk_analyze_subst(buf);
+	if (!strcmp(name, "quick")) {
+		for (int i=0;i<100;i++)
+			quick_subst_eval(buf);
+	}
+
 }
 
 int main(int argc, char *argv[])
@@ -88,8 +93,7 @@ int main(int argc, char *argv[])
 				printf("}\n");
 				return 0;
 			} if (!strcmp(argv[i], "--debug-analyze")) {
-				call_analyze(argv[i + 1], "DZBESHZDKSQGJEMSZSMEKFKJBISKBABFKBMYSHZSVDEZSIKBJSRGADHZDUTCSMBKHBVBUUBIWBIHZSMBULZGFMXFHCZBTUBCK");
-				call_analyze(argv[i + 1], "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBB");
+				call_analyze(argv[i + 1], "BAOHOGCDUSBMCTKVZDZBBOBHMTZCMRMZVMXTKBHZJWDAZBHUACMUBHOSSLOAMCDPMDZXMDUDBHMZCWZSBBOTMOJBHMNUNMCUBBURHMXBOZBAUDACZBBMJDOTMBHZJWCMULLKPOCZJWGBDHMDNOQMVMCKNOLZBMLKUJXLUXKLZQMBOTMUJXZAOGLXLZQMBOBHUJQ");
 				return 0;
 			}
 		}

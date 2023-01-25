@@ -53,6 +53,7 @@ void hillclimb();
 
 void bulk_analyze_freq(const char *buf);
 void bulk_analyze_subst(const char *buf);
+int quick_subst_eval(const char* buf);
 
 #define RNDWALK_POLYBIUS            1
 #define RNDWALK_TRANSPOSITION       2
