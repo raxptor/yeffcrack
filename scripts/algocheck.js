@@ -27,7 +27,7 @@ define(function(require, exports, module) {
 
 		var errors = 0;
 		var pause = 0;
-		
+
 		var prep = db.prepare("INSERT OR IGNORE INTO decrypt (uncracked, meta_transposition_order, length, eval, penalty, steps) VALUES (?, ?, ?, ?, ?, ?)");
 
 		function run_cracks(cracks, on_result) {
@@ -114,8 +114,17 @@ define(function(require, exports, module) {
 					db_inserts++;
 					if (!dry_run) {
 						var meta_transp_key = null;
-						if (d.meta_transposition_order)
-							meta_transp_key = d.meta_transposition_order.join(',');
+						if (d.meta_transposition_order) {
+							var tokens = new Array(2 * d.meta_transposition_order.length);
+							var p = 0;
+							let encode = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+							for (var t in d.meta_transposition_order) {
+								var o = d.meta_transposition_order[t];
+								tokens[p++] = encode.charAt(Math.floor(o / 25));
+								tokens[p++] = encode.charAt(o % 25);
+							}
+							meta_transp_key = tokens.join('');
+						}
 						prep.run([txt, meta_transp_key, txt.length, prop, penalty, JSON.stringify(ckdefs)], function(err) {
 							if (err) { console.error(err); db_err++; } else db_ok++;
 							console.log("inserted");
