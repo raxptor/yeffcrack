@@ -28,6 +28,7 @@ exports.crack_it = function(db, select, method, process) {
 				console.log("Launching task with ", task.length, " entries for method ", method);
 				let binpath = `c:\\users\\dan\\source\\repos\\yeffcrack\\release\\yeffcrack.exe`;
 				let script = child_process.execFile(binpath, ["--stdin-analyze", method], {}, function(err, out, stderr) {
+					console.log(out);
 					var results = JSON.parse(out);
 					for (var cipher in results) {
 						var r = results[cipher];
@@ -39,9 +40,10 @@ exports.crack_it = function(db, select, method, process) {
 				var lines = [];
 				for (var x in task)
 				{
-					lines.push(task[x].uncracked);
+					lines.push(task[x].uncracked + "|" + task[x].meta_transposition_order);
 				}
-				script.stdin.write(lines.join("\n"));
+				console.log(lines);
+				script.stdin.write(lines.join("\n") + "\n");
 				script.stdin.end();
 			}, function() {
 				console.log("Getting next batch.");

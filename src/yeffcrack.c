@@ -40,17 +40,15 @@ int no_score(const char* buf, int length)
 	return 0;
 }
 
-void call_analyze(char *name, const char*buf)
+void call_analyze(char *name, const char*buf, const char*order)
 {
+	fprintf(stderr, "Analyze[%s] called with [%s] and [%s]\n", name, buf, order);
 	if (!strcmp(name, "freq"))
 		bulk_analyze_freq(buf);
 	if (!strcmp(name, "subst"))
 		bulk_analyze_subst(buf);
-	if (!strcmp(name, "quick")) {
-		for (int i=0;i<100;i++)
-			quick_subst_eval(buf);
-	}
-
+	if (!strcmp(name, "colsubst"))
+		bulk_analyze_colsubst(buf, order);
 }
 
 int main(int argc, char *argv[])
@@ -69,8 +67,7 @@ int main(int argc, char *argv[])
 					fprintf(stderr, "Invalid scoring mode.\n");
 					exit(1);
 				}
-			}
-			if (!strcmp(argv[i], "--stdin-analyze")) {
+			} else if (!strcmp(argv[i], "--stdin-analyze")) {
 				size_t bufsize = 1024 * 1024 * 12;
 				char *buf = malloc(bufsize);
 				int pos = 0;
@@ -86,14 +83,34 @@ int main(int argc, char *argv[])
 				int first = 1;
 				while (token) {
 					if (!first) printf(", ");
-					call_analyze(argv[i + 1], token);
+
+					char tmp[4096];
+					strcpy(tmp, token);
+					int l = strlen(tmp);
+					char* _ck = token;
+					char* _order = "";
+					for (int k = 0; k < l; k++) {
+						if (tmp[k] == '|') {
+							tmp[k] = 0;
+							_ck = tmp;
+							_order = &tmp[k + 1];
+							break;
+						}
+					}
+
+					call_analyze(argv[i + 1], _ck, _order);
 					token = strtok(0, delim);
 					first = 0;
 				}
 				printf("}\n");
 				return 0;
 			} if (!strcmp(argv[i], "--debug-analyze")) {
-				call_analyze(argv[i + 1], "BAOHOGCDUSBMCTKVZDZBBOBHMTZCMRMZVMXTKBHZJWDAZBHUACMUBHOSSLOAMCDPMDZXMDUDBHMZCWZSBBOTMOJBHMNUNMCUBBURHMXBOZBAUDACZBBMJDOTMBHZJWCMULLKPOCZJWGBDHMDNOQMVMCKNOLZBMLKUJXLUXKLZQMBOTMUJXZAOGLXLZQMBOBHUJQ");
+				call_analyze(argv[i + 1], 
+					//"UXFRVNRABEDUFLFWGCFECUFRACDNKIDWDCDMGACQNFXXENBFCLDUNRFBEPLDUXREDHKDCEUEBDCNFACMFRFLSRDNDFQFSBBFUDRIBKFDNUFCEXBXRFCQEDFMDACQNFHDUPGPBFURMVQCONESREDRWDGSUDBCPPGDFPKQKGBPDOCRAFDVQBXRCKFKPODCPYFRQOBN",
+					"RWTOUHOMASERTFTVYITSIRTOMIEHDCEVEIEGYMINHTWWSHATIFERHOTASLFERWOSEBDEISRSAEIHTMIGTOTFPOEHETNTPAATREOCADTEHRTISWAWOTINSETGEMINHTBERLYLATROGUNIKHSPOSEOVEYPREAILLYETLDNDYALEKIOMTEUNAWOIDTDLKEILXTONKAH",
+					// n=10
+					//"WHUAOTOFRSEMVIYTRTISOHMEETTCIRIEMHDEVIYTGWTWINSRHAAHFOOETWFLRBSEEESSIDSHIIEATFRGTMOHETOENTAEAARPPCTTETIAOHDSTWRTEOTWIMNSTIGANEHLREYOIURLBTNGHSOVPSEEKEYOILLRPYTENLDIAADKYLTMAIEEOWNDUDITLOLOKEHNXXKTAXXX",
+					"AAABACADAEAFAGAHAIAJAKALAMANAOAPAQARASATAUAVAWAXAYBABBBCBDBEBFBGBHBIBJBKBLBMBNBOBPBQBRBSBTBUBVBWBXBYCACBCCCDCECFCGCHCICJCKCLCMCNCOCPCQCRCSCTCUCVCWCXCYDADBDCDDDEDFDGDHDIDJDKDLDMDNDODPDQDRDSDTDUDVDWDXDYEAEBECEDEEEFEGEHEIEJEKELEMENEOEPEQERESETEUEVEWEXEYFAFBFCFDFEFFFGFHFIFJFKFLFMFNFOFPFQFRFSFTFUFVFWFXFYGAGBGCGDGEGFGGGHGIGJGKGLGMGNGOGPGQGRGSGTGUGVGWGXGYHAHBHCHDHEHFHGHHHIHJHKHLHMHNHOHPHQHRHSHTHU");
 				return 0;
 			}
 		}

@@ -28,7 +28,7 @@ define(function(require, exports, module) {
 		var errors = 0;
 		var pause = 0;
 
-		var prep = db.prepare("INSERT OR IGNORE INTO decrypt (uncracked, meta_transposition_order, length, eval, penalty, steps) VALUES (?, ?, ?, ?, ?, ?)");
+		var prep = db.prepare("INSERT OR IGNORE INTO decrypt (uncracked, meta_transposition_order, length, complexity, eval, penalty, steps) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
 		function run_cracks(cracks, on_result) {
 			var d = { input: "" };
@@ -93,7 +93,7 @@ define(function(require, exports, module) {
 				key = txt;
 			
 			if (txt.length > 30 && !added[key]) {
-				console.log(txt, config.analyze_prop, "=", prop);
+				//console.log(txt, config.analyze_prop, "=", prop);
 				added[key] = true;	
 
 				var norm = util.normalize(txt);
@@ -125,9 +125,8 @@ define(function(require, exports, module) {
 							}
 							meta_transp_key = tokens.join('');
 						}
-						prep.run([txt, meta_transp_key, txt.length, prop, penalty, JSON.stringify(ckdefs)], function(err) {
+						prep.run([txt, meta_transp_key, txt.length, ckdefs.length - begin.length - end.length, prop, penalty, JSON.stringify(ckdefs)], function(err) {
 							if (err) { console.error(err); db_err++; } else db_ok++;
-							console.log("inserted");
 						});
 					}
 				}

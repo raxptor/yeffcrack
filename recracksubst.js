@@ -11,7 +11,7 @@ const db = new sqlite3.Database(conf.database, (err) => {
 	} else {
 		var touche = 1;
 		bulk.bucket_size = 1;
-		bulk.crack_it(db, "SELECT uncracked, freq_rating from decrypt WHERE touched <> " + touche + " ORDER BY quadgram_rating DESC", "subst", function(cipher, r) {
+		bulk.crack_it(db, "SELECT uncracked, meta_transposition_order, freq_rating from decrypt WHERE touched <> " + touche + " ORDER BY quadgram_rating DESC", "subst", function(cipher, r) {
 			console.log(r);
 			if (r.quadgram_rating && r.cracked && r.alphabet) {
 				db.run("UPDATE decrypt SET touched = ? WHERE uncracked = ?", [touche, cipher]);

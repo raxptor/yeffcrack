@@ -198,19 +198,17 @@ void bulk_analyze_subst(const char *buf)
 	printf("\", \"quadgram_rating\": \"%d\", \"alphabet\": \"%s\" }\n", best_score, best);
 }
 
-
 static int s_seed = 0x23432412;
-int quick_subst_eval(const char* buf)
+int quick_subst_eval(const char* buf, MTRand* rnd, char* best_alphabet)
 {
 	char tmp[1024];
 	strcpy(tmp, buf);
 	int len = strlen(buf);
-	int freq_score = score_freq(tmp, len);
-	MTRand rnd = seedRand(s_seed++);
+	int freq_score = score_freq(tmp, len);	
 	char best[64], workfrom[64];
 	memset(best, 0x00, 64);
 	memset(tmp, 0x00, 64);
-	source_alphabet(best, &rnd);
+	source_alphabet(best, rnd);
 	memcpy(workfrom, best, 64);
 	int best_score = eval_crack(best, buf, len);
 	int cur_score = 0;
@@ -220,7 +218,7 @@ int quick_subst_eval(const char* buf)
 	{
 		memcpy(tmp, workfrom, 26);
 		//guided_swap(tmp, &rnd, phase);
-		permutation_walk(tmp, &rnd, 26);
+		permutation_walk(tmp, rnd, 26);
 		int score = eval_crack(tmp, buf, len);
 		if (score > cur_score)
 		{
@@ -239,13 +237,13 @@ int quick_subst_eval(const char* buf)
 
 			if (++failures > 3000) {
 				cur_score = 0;
-				source_alphabet(tmp, &rnd);
+				source_alphabet(tmp, rnd);
 				for (int i = 0; i < 20; i++)
 				{
 					if (!i)
 						make_freq_alphabet(tmp, buf, len);
 					else
-						source_alphabet(tmp, &rnd);
+						source_alphabet(tmp, rnd);
 					int eval = eval_crack(tmp, buf, len);
 					if (!i || eval > cur_score)
 					{
@@ -257,7 +255,7 @@ int quick_subst_eval(const char* buf)
 			}
 		}
 	}
-	printf("Best score:%d\n", best_score);
+	memcpy(best_alphabet, best, 26);
 	return best_score;
 }
 
