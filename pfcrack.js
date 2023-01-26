@@ -8,9 +8,9 @@ const db = new sqlite3.Database(conf.database, (err) => {
 		console.log("Failed to open database.");
 		exit(-1);
 	} else {
-		bulk.bucket_size = 6;
-		bulk.num_buckets = 5;
-		var query = "SELECT uncracked, abs(eval-" + conf.prio_eval + ") as eval_diff, length from decrypt WHERE cracked is NULL ORDER BY penalty ASC, eval_diff ASC, complexity ASC";
+		bulk.bucket_size = 8;
+		bulk.num_buckets = 4;
+		var query = "SELECT uncracked, abs(eval-" + conf.prio_eval + ") as eval_diff, length from decrypt WHERE cracked is NULL ORDER BY penalty ASC, complexity ASC, eval_diff ASC";
 		console.log(query);
 		bulk.crack_it(db, query, "playfair", function(cipher, r) {
 			if (r.quadgram_rating && r.cracked && r.alphabet) {

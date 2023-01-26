@@ -164,6 +164,7 @@ void bulk_analyze_playfair(const char* txt, const char* order)
 	char best_result[1024];
 	char best_alphabet[64];
 	strcpy(best_result, "ZILCH");
+	strcpy(best_alphabet, "NO ALPHABET");
 	MTRand rnd = seedRand(0x8fe2d2c0 + 40);
 	for (int i = 0; i < 16; i++) {
 		if (eval_entry[i].eval < 0)
@@ -174,8 +175,10 @@ void bulk_analyze_playfair(const char* txt, const char* order)
 		revindex(box);
 
 		char tmp[512];
-		if (!compute_playfair(tmp, box, txt, len))
-			fprintf(stderr, "CANNOT EVALUATE!!\n");
+		if (!compute_playfair(tmp, box, txt, len)) {
+			continue;
+		}
+		
 		tmp[len] = 0;
 
 		char alphabet[26];

@@ -26,11 +26,21 @@ exports.crack_it = function(db, select, method, process) {
 				buckets[i%buckets.length].push(rows[i]);
 			// Parallel.
 			async.eachLimit(buckets, num_buckets, function(task, cb) {
+				if (task.length == 0) {
+					cb();
+					return;
+				}
 				console.log("Launching task with ", task.length, " entries for method ", method);
 				let binpath = `c:\\users\\dan\\source\\repos\\yeffcrack\\release\\yeffcrack.exe`;
 				let script = child_process.execFile(binpath, ["--stdin-analyze", method], {}, function(err, out, stderr) {
-					var results = JSON.parse(out);
-					console.log("The result is", results);
+					var results;
+					try {
+						results = JSON.parse(out);
+					} catch (e) {
+						console.error("Invalid input [" + out + "] stderr=", stderr);
+						cb();
+						return;
+					}
 					for (var cipher in results) {
 						var r = results[cipher];
 						process(cipher, r, r.meta_transposition_order);						
