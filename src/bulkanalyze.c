@@ -20,7 +20,6 @@ void source_alphabet(char *buf, MTRand *rand)
 	char used[256];
 	memset(buf, 0x00, 26);
 	memset(used, 0x00, 26);
-	const char *word = word_get_random(0, rand);
 
 	int p = 0;
 	for (unsigned int i = 0; i < 40; i++) {

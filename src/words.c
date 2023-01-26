@@ -10013,6 +10013,13 @@ void words_init()
 		word_lengths[i] = strlen(words_10k[i]);
 }
 
+const char* word_by_index(int index)
+{
+	if (index < num_words)
+		return words_10k[index];
+	return 0;
+}
+
 const char* word_get_random(int length, MTRand* rand)
 {
 	int which = genRandLong(rand) % num_words;

@@ -2,7 +2,7 @@ define(function(require, exports, module) {
 	
 
 	var jim_routes = require("./jimroutes.js");
-	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'grid_view', 'coltransp', 'meta_transposition', 'stats'];
+	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'playfair', 'grid_view', 'coltransp', 'meta_transposition', 'stats'];
 
 	function add_toggle_ui(d, prop, label) {
 		var inverse = document.createElement('input');
@@ -926,17 +926,17 @@ define(function(require, exports, module) {
 	function make_polyb_subst(d) {
 		var real = new Array(25);
 		var left = "ABCDEFGHIKLMNOPQRSTUVWXYZ";
-		var inp = d.data.box;
+		var inp = d.data.box.toUpperCase();
 		for (var i=0;i<25;i++) {
 			var c = inp.charAt(i);
-			if (c != '?') {
+			if (i < inp.length && c != '?') {
 				real[i] = c;
 				left = left.replace(c, '');
 			}
 		}
 		var c = 0;
 		for (var i=0;i<25;i++) {
-			if (inp.charAt(i) == '?') {
+			if (i >= inp.length || inp.charAt(i) == '?') {
 				real[i] = left.charAt(c++);
 			}
 		}
@@ -955,8 +955,7 @@ define(function(require, exports, module) {
 				out.push(real[c]);
 			}
 		}
-	}
-
+	}	
 	exports.polybius = {
 		create: function() { 
 			return {
@@ -1073,6 +1072,112 @@ define(function(require, exports, module) {
 		},
 		title: "Polybius",
 		crack_step: true
+	};	
+	exports.playfair = {
+		create: function() { 
+			return {
+				box: "ABCDEFGHIKLMNOPQRSTUVWXYZ",
+				inverse: false
+			}; 
+		},
+		make_playfair_subst: make_polyb_subst,
+		process: function(d) {
+			// These are meta columnar transposition values that we need to translate into indices.
+			// After that we undo the meta and get back what we would have had without it.
+			if (d.group_width === -1) {
+				console.log("Does not support meta transposition with playfair.")
+				return;
+			}
+			var real = make_polyb_subst(d);
+			let letters = Math.floor(d.input.length/2);
+			let length = letters * 2;
+			var out = new Array(length);
+			var indices = new Array(length);
+
+			if (typeof d.input[0] == 'number') {
+				throw "No number support";
+			} else {				
+				for (var i=0;i<length;i++) {
+					var idx = real.indexOf(d.input[i]);
+					if (idx == -1) {
+						d.error = "Invalid playfair input " + d.input[i] + " " + real;
+						return;
+					}
+					indices[i] = idx;
+				}
+			}
+
+			for (var i=0;i<length;i+=2) {
+				var c0 = indices[i] % 5;
+				var r0 = Math.floor(indices[i] / 5);
+				var c1 = indices[i+1] % 5;
+				var r1 = Math.floor(indices[i+1] / 5);
+				var r2, c2, r3, c3;
+				if (c0 == c1 && r0 == r1) {
+					d.error = "Duplicate letter in playfair input";
+					d.output = [];
+					return;
+				}
+				if (r0 == r1) {
+					r2 = r0;
+					r3 = r1;
+					c2 = (c0 + 4) % 5;
+					c3 = (c1 + 4) % 5;
+				} else if (c0 == c1) {
+					c2 = c0;
+					c3 = c1;
+					r2 = (r0 + 4) % 5;
+					r3 = (r1 + 4) % 5;
+				} else {
+					c2 = c1;
+					c3 = c0;
+					r2 = r0;
+					r3 = r1;
+				}
+				out[i] = real[r2 * 5 + c2];
+				out[i+1] = real[r3 * 5 + c3];
+			}
+
+			if (d.ui) {
+				var root = d.ui;
+				while (root.childNodes.length > 0) {
+					root.removeChild(root.childNodes[0]);
+				}	
+				var count = [];
+				for (var i=0;i<25;i++)
+					count.push(0);
+				for (var i=0;i<indices.length;i++)
+					count[indices[i]]++;	
+				for (var y=0;y<5;y++) {
+					var rr = document.createElement('x-grid-row');
+					for (var x=0;x<5;x++) {
+						var b = document.createElement('x-grid-entry');
+						b.textContent = real[y*5+x];
+						rr.appendChild(b);
+					}
+					var spacer = document.createElement('x-grid-entry');
+					spacer.style.opacity = 0.0;
+					rr.appendChild(spacer);
+					for (var x=0;x<5;x++) {
+						var b = document.createElement('x-grid-entry');
+						b.textContent = count[y*5+x];// d.data.box[y*5+x];
+						rr.appendChild(b);
+					}	
+					root.appendChild(rr);
+				}
+			}	
+			d.output = out;
+		},
+
+		make_ui: function(d) {			
+			add_input_box(d, "box");
+			add_inverse_ui(d);
+			var ta = document.createElement('x-grid');
+			d.container.appendChild(ta);
+			return ta;
+		},
+		title: "Playfair",
+		crack_step: false
 	};	
 	exports.grid_view = {
 		create: function() { 

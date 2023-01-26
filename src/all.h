@@ -35,6 +35,7 @@ int score_freq_with_sorting_positive(const char* buf, int length);
 
 void words_init();
 const char* word_get_random(int length, MTRand* rand);
+const char* word_by_index(int index);
 
 // cracks
 void permutation_walk(char* p, MTRand* rand, int len);
@@ -54,6 +55,7 @@ void hillclimb();
 void bulk_analyze_freq(const char *buf);
 void bulk_analyze_subst(const char *buf);
 void bulk_analyze_colsubst(const char* buf, const char* order);
+void bulk_analyze_playfair(const char* txt, const char* order);
 int quick_subst_eval(const char* buf, MTRand* rnd, char* best_alphabet);
 
 #define RNDWALK_POLYBIUS            1

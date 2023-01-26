@@ -132,10 +132,9 @@ define(function(require, exports, module) {
 
 				uniq_count++;
 				var penalty = util.compute_penalty(txt);
-				if (penalty > 1000000) {
+				if (penalty > 1000000 || penalty > config.penalty_max) {
 					junk_count++;
-				}
-				if (prop < config.eval_min || prop > config.eval_max) {
+				} else if (prop < config.eval_min || prop > config.eval_max) {
 					bad_eval++;
 				} else {
 					db_inserts++;
