@@ -1,49 +1,12 @@
 define(function(require, exports, module) {
-	var all_mods = require('./all.js');
-	exports.make_grid = {
-        automake: function(cracks, state, output) {
-            var len = state.input.length;
-            for (var i=3;i<100;i++) {
-                if (len%i == 0) {
-                    output.push({
-                        type: "make_grid",
-                        data: {
-                            width: i
-                        }
-                    });
-                }
-            }
-        },
-        check: function(cracks, state) {
-            if (cracks[cracks.length-1].type == "make_grid") {
-                return false;
-            }
-            return true;
-        }
-    };
-    function is_full_grid(d) {
-        if (d.grid === undefined) return false;
-        var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
-        return height * d.grid.width == d.input.length;
-    }
-    exports.grid_pattern = {
-        check: function(cracks, state) {
-            //console.log("is full grid ?", is_full_grid(state));
-            return is_full_grid(state);
-        }
-    }
+    var all_mods = require('./all.js');
     exports.transpose = {
         automake: function(cracks, state, output) {
-            if (is_full_grid(state) && cracks[cracks.length-1].type != "transpose") {
-                output.push({
-                    type: "transpose",
-                });
-            }
+		output.push({
+			type: "transpose",
+			autogrid: true
+		});
         },
-        check: function(cracks, state) {
-            return is_full_grid(state) && cracks[cracks.length-1].type != "transpose";
-        },
-	  autogrid: exports.make_grid.automake
     },
     exports.pair_sort = {
         automake: function(cracks, state, output) {
@@ -100,49 +63,45 @@ define(function(require, exports, module) {
                     type: "group_up",
                     data: {
                         width: 2
-                    }
+                    },
+			  auto: true
                 });
             }
         },
         check: function(cracks, state) {
-            return state.group_width === undefined;
+            return state.group_width == undefined;
         }
     }
     exports.meta_transposition = {
 	automake: function(cracks, state, output) {
-		output.push({
-			type: "meta_transposition",
-			data: {
-				width: 2
-			}
-		  });
+		if (state.group_width == 2) {
+			output.push({
+				type: "meta_transposition"
+			});
+		}
 	},
 	check: function(cracks, state) {
 		return state.group_width == 2;
 	}
     }
     exports.complete_spirals = {
-        automake: function(cracks, state, output) {
-            if (is_full_grid(state)) {
-                var spirals = ["SpiralTL", "SpiralTR", "SpiralBR", "SpiralBL"];
-                var old = output.length;
-                for (var i=0;i<spirals.length;i++) {
-                    for (var m=0;m<4;m++) {
-                        output.push({
-                            type: "grid_pattern",
-                            data: {
-                                mode: spirals[i],
-                                inverse: (m%2 == 0),
-                                reverse: (m >=2),
-                            },
-				    unique: "spiral"
-                        });
-                    }
-                }
-            }
-        },
-        check: function(cracks, state) {
-            return is_full_grid(state);
-        }
-    }      
+	automake: function(cracks, state, output) {
+		var spirals = ["SpiralTL", "SpiralTR", "SpiralBR", "SpiralBL"];
+		var old = output.length;
+		for (var i=0;i<spirals.length;i++) {
+			for (var m=0;m<4;m++) {
+			output.push({
+				type: "grid_pattern",
+				data: {
+					mode: spirals[i],
+					inverse: (m%2 == 0),
+					reverse: (m >=2),
+				},
+				unique: "spiral",
+				autogrid: true
+			});
+			}
+		}
+	},
+    }
 });

@@ -7,14 +7,15 @@ define(function(require, exports, module) {
 
 	exports.run_algocheck = function(db, config) {
 		console.log("Running algocheck", config, " dry_run", this.dry_run);
-		var begin = config.cracks_fixed_begin;
-		var end = config.cracks_fixed_end;
+		var begin = config.cracks_fixed_begin.slice(0);
+		var end = config.cracks_fixed_end.slice(0);
 		var dry_run = this.dry_run;
 
 		function mk_crack(def) {
 			var ck = {
 				type: def.type,
 				cls: all_mods[def.type],
+				autogrid: def.autogrid
 			};
 			if (def.data === undefined) {
 				if (!ck.cls) console.error("No definition for", ck.type);
@@ -27,7 +28,6 @@ define(function(require, exports, module) {
 
 		var errors = 0;
 		var pause = 0;
-
 		var prep = db.prepare("INSERT OR IGNORE INTO decrypt (uncracked, meta_transposition_order, length, complexity, eval, penalty, steps) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
 		function run_cracks(cracks, on_result) {
@@ -36,9 +36,16 @@ define(function(require, exports, module) {
 				try {
 					d.data = cracks[i].data;
 					delete d.output;
+
+					var old_width = d.grid_width;
+					if (cracks[i].set_grid) {
+						d.grid = { width: cracks[i].set_grid };
+					}
 					cracks[i].cls.process(d);
+					d.grid = old_width;
+
 					if (d.error) {
-						//console.log(d.error);
+						console.error(d.error);
 						errors++;
 					}
 					d.input = d.output;
@@ -72,17 +79,37 @@ define(function(require, exports, module) {
 		var uniq_count = 0;
 		var junk_count = 0;
 		var norm_dupes = 0;
-		var culled = 0;		
+		var culled = 0;
 		var db_ok=0, db_err = 0;
 		var db_inserts = 0;
+		var rule_skips = 0;
+		var allowed_grids = { };
+
+		function get_allowed_grids(width) {
+			if (allowed_grids[width] !== undefined)
+				return allowed_grids[width];
+			var tmp = [];
+			for (var i=4;i<width;i++) {
+				if ((width % i) == 0)
+					tmp.push(i);
+			}
+			allowed_grids[width] = tmp;
+			return tmp;
+		}
 
 		function on_output(d, ckdefs) {
+
 			var prop = d[config.analyze_prop];
 			if (typeof prop == 'number')
 				prop = Math.floor(prop);
 
 			if (((++total_count) % 1000) == 0) {
-				console.log(`Processed ${total_count} variants with ${uniq_count} unique outputs (${norm_dupes} norm dupes), ${bad_eval} bad ${config.analyze_prop}, ${junk_count} junk. Culled trees=${culled} => Inserts:${db_inserts} OK:${db_ok} Err:${db_err}`);
+				console.log(`Processed ${total_count} variants with ${uniq_count} unique outputs (${norm_dupes} norm dupes), ${bad_eval} bad ${config.analyze_prop}, ${junk_count} junk. Rule skips ${rule_skips}. Culled trees=${culled} => Inserts:${db_inserts} OK:${db_ok} Err:${db_err}`);
+			}
+
+			if (config.coltransp_only && !d.meta_transposition_order) {
+				rule_skips++;
+				return;
 			}
 
 			var txt = d.output.join('');
@@ -125,7 +152,22 @@ define(function(require, exports, module) {
 							}
 							meta_transp_key = tokens.join('');
 						}
-						prep.run([txt, meta_transp_key, txt.length, ckdefs.length - begin.length - end.length, prop, penalty, JSON.stringify(ckdefs)], function(err) {
+						var steps = [];
+						for (var x=0;x<ckdefs.length;x++) {
+							if (ckdefs[x].set_grid !== undefined) {
+								steps.push({
+									type: "make_grid",
+									data: {
+										"width": ckdefs[x].set_grid
+									}
+								})
+							}
+							steps.push({
+								type: ckdefs[x].type,
+								data: ckdefs[x].data
+							});
+						}
+						prep.run([txt, meta_transp_key, txt.length, ckdefs.length - begin.length - end.length, prop, penalty, JSON.stringify(steps)], function(err) {
 							if (err) { console.error(err); db_err++; } else db_ok++;
 						});
 					}
@@ -139,28 +181,22 @@ define(function(require, exports, module) {
 		function run_all(inserts, tags, depth) {
 
 			if (depth < begin.length) {
-				inserts[depth] = mk_crack(begin[depth]);
+				inserts[depth] = begin[depth];
 				run_all(inserts, tags, depth + 1);
 				return;
 			}
 
 			// Run the cracks up to this point.
-			var ckdefs = [];
-			var ckdefs_full = [];
-			for (var i=0;i<depth;i++) {
-				var c = mk_crack(inserts[i]);
-				ckdefs.push(c);
-				ckdefs_full.push(c);
-			}
-			for (var i=0;i<end.length;i++) {
-				ckdefs_full.push(mk_crack(end[i]));
-			}			
+			var ckdefs = inserts.slice(0, depth);
+			var ckdefs_full = ckdefs.concat(end);
 
 			//console.log("eval base", ckdefs);
+			//console.log("Running partial cracks", ckdefs, " depth", depth);
 			run_cracks(ckdefs, function(d) {
 
-				if (d.input.length < 10)
+				if (d.input.length < 10) {
 					return;
+				}
 
 				var grid_width = (d.grid !== undefined) ? d.grid.width : 0;
 				var group_width = d.group_width || 0;
@@ -194,6 +230,8 @@ define(function(require, exports, module) {
 				if (depth == (depth_end+1))
 					return;
 
+				var allowed_grids = get_allowed_grids(d.input.length);
+
 				var to_consider = [];
 				for (var i=0;i<config.autocracks.length;i++)
 				{
@@ -201,10 +239,8 @@ define(function(require, exports, module) {
 					if (!autoconf[ck] || !autoconf[ck].automake) {
 						console.log(ck, " has no automake");
 						continue;
-					}					
-					if (autoconf[ck].check && !autoconf[ck].check(ckdefs, d)) {
-						continue;
 					}
+					// Automakes aren't checked.
 					var l0 = to_consider.length;
 					autoconf[ck].automake(ckdefs, d, to_consider);
 				}
@@ -213,8 +249,9 @@ define(function(require, exports, module) {
 				{
 					var auto = autoconf[config.cracks_insert[i].type];
 					if (auto) {
+						// Checks are for manual entries.
 						if (auto.check && !auto.check(ckdefs, d)) {
-							// console.log("Skipping ", config.cracks_insert[i], " because check.");
+							console.log("Skipping ", config.cracks_insert[i], " because check.");
 							continue;
 						}
 					}
@@ -225,17 +262,31 @@ define(function(require, exports, module) {
 				var p = ckdefs.length;
 				ckdefs.push(null);
 				for (var i=0;i<to_consider.length;i++) {
-					inserts[depth] = to_consider[i];	
-					ckdefs[p] = mk_crack(to_consider[i]);
+					inserts[depth] = mk_crack(to_consider[i]);
 					var t = to_consider[i].unique;
 					if (t && tags[t]) {
 						continue;
 					}
 					if (t) tags[t] = true;
-					run_all(inserts, tags, depth + 1);
+
+					if (inserts[depth].autogrid) {
+						for (var g=0;g<allowed_grids.length;g++) {
+							inserts[depth].set_grid = allowed_grids[g];
+							run_all(inserts, tags, depth + 1);
+						}
+					} else {
+						run_all(inserts, tags, depth + 1);
+					}
 					if (t) tags[t] = false;
 				}
 			});
+		}
+
+		for (var x in begin) {
+			begin[x] = mk_crack(begin[x]);
+		}
+		for (var x in end) {
+			end[x] = mk_crack(end[x]);
 		}
 
 		var inserts = new Array(32);

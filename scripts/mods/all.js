@@ -425,7 +425,6 @@ define(function(require, exports, module) {
 				d.output = d.input;
 				return;
 			} else if (d.group_width) {
-				d.error = "Already grouped";
 				d.output = d.input;
 				return;
 			}
@@ -598,11 +597,15 @@ define(function(require, exports, module) {
 			always_nulls: ""
 		}; },
 		process: function(d) {
-			var output = [];
-			for (var i=0;i<d.input.length;i++)
-				if (d.data.always_nulls.indexOf(d.input[i]) == -1)
-					output.push(d.input[i]);
-			d.output = output;
+			if (d.group_width != undefined) {
+				d.output = d.input;
+			} else {
+				var output = [];
+				for (var i=0;i<d.input.length;i++)
+					if (d.data.always_nulls.indexOf(d.input[i]) == -1)
+						output.push(d.input[i]);
+				d.output = output;
+			}
 		},
 		make_ui: function(d) {
 			var ns = document.createElement('input');
