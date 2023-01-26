@@ -138,7 +138,7 @@ void bulk_analyze_subst(const char *buf)
 	int cur_score = 0;
 	int failures = 0;
 	int phase = 0;
-	for (int i=0;i<25659829;i++)
+	for (int i=0;i<3000000;i++)
 	//for (int i = 0; i < 2069; i++)
 	{
 		memcpy(tmp, workfrom, 26);
