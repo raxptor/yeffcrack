@@ -75,10 +75,10 @@ static int compute_playfair(char* out, const char* box, const char* txt, int len
 		int r0, r1, r2, r3;
 		int i0 = box[32+txt[i] - 'A'];
 		int i1 = box[32+txt[i+1] - 'A'];
-		c0 = i0 % 5;
-		r0 = i0 / 5;
-		c1 = i1 % 5;
-		r1 = i1 / 5;
+		c0 = i0 / 5;
+		r0 = i0 % 5;
+		c1 = i1 / 5;
+		r1 = i1 % 5;
 		if (c0 == c1 && r0 == r1) {
 			return 0;
 		} else if (r0 == r1) {

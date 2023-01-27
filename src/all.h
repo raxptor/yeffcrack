@@ -56,6 +56,7 @@ void bulk_analyze_freq(const char *buf);
 void bulk_analyze_subst(const char *buf);
 void bulk_analyze_colsubst(const char* buf, const char* order);
 void bulk_analyze_playfair(const char* txt, const char* order);
+void bulk_analyze_double_polybius(const char* txt, const char* order);
 int quick_subst_eval(const char* buf, MTRand* rnd, char* best_alphabet);
 
 #define RNDWALK_POLYBIUS            1
