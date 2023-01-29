@@ -707,7 +707,7 @@ define(function(require, exports, module) {
 			if (d.grid) {
 				var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
 				if (height * d.grid.width != d.input.length) {
-					d.error = "No transpose of incomplete matrix"
+					// d.error = "No transpose of incomplete matrix"
 				}
 				var output = [];
 				for (var x=0;x<d.grid.width;x++) {
@@ -791,19 +791,47 @@ define(function(require, exports, module) {
 			if (order.length < 2)
 				return;
 			d.grid = { width: order.length };
-			var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
+			var height = Math.floor((d.input.length)/(d.grid.width));
 			var output = [];
-			for (var y=0;y<height;y++) {
-				var src_y = y;
-				if (d.data.double)
-					src_y = order[y].index;
+
+			if (d.data.inverse) {
+				// encrypt
 				for (var x=0;x<d.grid.width;x++) {
-					var outp = order[x].index;
-					var idx = src_y * d.grid.width + outp;
-					if (idx < d.input.length)
-						output.push(d.input[idx]);
-					else
-						output.push('-1');
+					var src_col = order[x].index;
+					for (var y=0;y<(height+1);y++) {
+						var idx = y * d.grid.width + src_col;
+						if (idx < d.input.length)
+							output.push(d.input[idx]);
+					}
+				}
+			} else {
+				var outbuf = new Array(d.grid.width * (height + 1));
+				var remainder = d.input.length - d.grid.width * height;
+				var readp = 0;
+				var in_order = new Array(order.length);
+				for (var x=0;x<d.grid.width;x++) {
+					in_order[order[x].index] = x;
+				}
+				for (var i=0;i<outbuf.length;i++) outbuf[i] = '?';
+				for (var x=0;x<d.grid.width;x++) {
+					var src_col = in_order[x];
+					var col_height = src_col < remainder ? height + 1 : height;
+					for (var y=0;y<col_height;y++) {
+						var idx = y * d.grid.width + src_col;
+						outbuf[idx] = d.input[readp++];
+					}
+				}
+				if (readp != d.input.length)
+					console.error("readp = ", readp, " total=" , d.input.length);
+				for (var y=0;y<(height+1);y++) {
+					var src_y = y;
+					if (d.data.double)
+						src_y = order[y].index;
+					for (var x=0;x<d.grid.width;x++) {
+						var idx = src_y * d.grid.width + x;
+						if (outbuf[idx] != '?')
+							output.push(outbuf[idx]);
+					}
 				}
 			}
 			d.output = output;

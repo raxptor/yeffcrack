@@ -9,7 +9,7 @@ struct QuadgramInput {
 typedef struct QuadgramInput QuadgramInput_t;
 
 static const QuadgramInput_t RAWQUAD[] = {
-//	{"HEJE", 0}
+// {"HEJE", 0}
 	#include "quadgrams.inc"
 };
 

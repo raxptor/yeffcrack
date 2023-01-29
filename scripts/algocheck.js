@@ -86,6 +86,9 @@ define(function(require, exports, module) {
 		var allowed_grids = { };
 
 		function get_allowed_grids(width) {
+			if (config.allowed_grids) {
+				return config.allowed_grids;
+			}
 			if (allowed_grids[width] !== undefined)
 				return allowed_grids[width];
 			var tmp = [];
@@ -132,7 +135,7 @@ define(function(require, exports, module) {
 
 				uniq_count++;
 				var penalty = util.compute_penalty(txt);
-				if (penalty > 1000000 || penalty > config.penalty_max) {
+				if (penalty > config.penalty_max) {
 					junk_count++;
 				} else if (prop < config.eval_min || prop > config.eval_max) {
 					bad_eval++;

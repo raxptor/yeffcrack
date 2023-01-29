@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS "decrypt" (
 	"meta_transposition_order"	TEXT,
 	"quadgram_rating"	NUMERIC,
 	"cracked"	TEXT,
+	"frak_scores"	TEXT,
 	"best_width"	INTEGER,
 	"alphabet"	TEXT,
 	"steps"	TEXT,

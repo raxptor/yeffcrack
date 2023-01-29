@@ -49,6 +49,7 @@ void permutation_walk(char* perm, MTRand* rand, int len);
 
 int compute_ic(const char* buf, int len);
 float compute_ic_f(const char* buf, int len);
+int compute_penalty(const char* buf, int length);
 
 #define ENGLISH_IC 6860
 #define ENGLISH_IC_F 0.06860
