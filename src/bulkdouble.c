@@ -83,7 +83,8 @@ static void randomize_unlocks(const char* txt)
 	char best_alphabet[128];
 	strcpy(best_result, "NOTHING");
 	strcpy(best_alphabet, "NO ALPHABET");
-	for (int i=0;i<5000;i++)	{
+	int matched = 0;
+	for (int i=0;i<10000;i++)	{
 		++combinations;
 		int unlocked[32];
 		char values[32];
@@ -91,27 +92,31 @@ static void randomize_unlocks(const char* txt)
 			unlocked[i] = 1;
 			values[i] = (genRandLong(&rnd) & 0xffff) % 5 + 1;
 		}
-		char res[512];
-		int len = eval_partial_box(res, txt, unlocked, values, 6);
-		if (len > 0) {
-			res[len] = 0;
-			int eval = compute_ic(res, len);
-			int penalty = compute_penalty(res, len);
-			if (penalty < 202 && eval > 6000 && eval < 6900) {
-				//if (eval > best_eval) {
-				char alphabet[64] = { 0 };
-				int subst = quick_subst_eval(res, &rnd, alphabet);
-				int min_subst = 100000000;
-				for (int i = 0; i < len; i++)
-					res[i] = alphabet[res[i] - 'A'];
-				if (subst > best_subst) {
-					best_subst = subst;
-					strcpy(best_result, res);
-					strcpy(best_alphabet, alphabet);
-					fprintf(stderr, "It %d; best %d => %s\n", combinations, best_subst, best_result);
+		for (int ofs = 0; ofs < 2; ofs++) {
+			char res[512];
+			int len = eval_partial_box(res, txt + ofs, unlocked, values, 6);
+			if (len > 0) {
+				res[len] = 0;
+				int eval = compute_ic(res, len);
+				int penalty = compute_penalty(res, len);
+				if (penalty < 202 && eval > 6200 && eval < 6800) {
+					//if (eval > best_eval) {
+					matched++;
+					char alphabet[64] = { 0 };
+					int subst = quick_subst_eval(res, &rnd, alphabet);
+					int min_subst = 100000000;
+					for (int i = 0; i < len; i++)
+						res[i] = alphabet[res[i] - 'A'];
+					if (subst > best_subst) {
+						best_subst = subst;
+						strcpy(best_result, res);
+						strcpy(best_alphabet, alphabet);
+						fprintf(stderr, "It %d; best %d => %s\n", combinations, best_subst, best_result);
+					}
 				}
 			}
 		}
+		//printf("%d %d matched\n", i, matched);
 	}
 
 	printf("\"%s\": { \"cracked\": \"%s", txt, best_result);

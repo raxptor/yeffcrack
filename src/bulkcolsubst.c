@@ -66,7 +66,7 @@ int compute_penalty(const char* buf, int length)
 		+ 16 * 16 * 16 * 16 * occurences[6];
 }
 
-void swap(int* a, int* b)
+static void swap(int* a, int* b)
 {
 	int tmp = *a;
 	*a = *b;

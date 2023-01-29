@@ -1,6 +1,7 @@
 // See define ENGLISH_IC in all.h
 
-int compute_ic(const char* buf, int len)
+
+float compute_ic_f(const char* buf, int len)
 {
 	int counts[25];
 	int tot = 0;
@@ -26,5 +27,11 @@ int compute_ic(const char* buf, int len)
 
 	if (den == 0)
 		return 0;
-	return (100000 * num) / (den * (den - 1));
+	return ((float)num) / (float)(den * (den - 1));
+}
+
+
+int compute_ic(const char* buf, int len)
+{
+	return (int)(100000 * compute_ic_f(buf, len));
 }

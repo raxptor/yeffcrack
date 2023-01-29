@@ -14,7 +14,8 @@ const int selections_6 = CHOOSE_14_6;
 
 typedef struct FrakCrack_t {
 	const char* inputBuffer;
-	int length, rows;
+	int length, rows, incomplete;
+	int incomplete_rows;
 	// 
 	int result_count;
 	int max_results;
@@ -31,11 +32,21 @@ typedef struct FrakCrack_t {
 	int leave_columns;
 	int remaining[16];
 
+	int col_start;
+	int col_expected_mask;
+	int perms_skipped;
+	int perms_included;
+
 	int selection_bits[CHOOSE_14_6];
-	char counts_segments[25 * CHOOSE_14_6 * PERMS_6];
+	char counts_segments[26 * CHOOSE_14_6 * PERMS_6];
+	int section_a_count;
+	int section_b_count;
 
 	char selection[64];
 	int num_selections;
+
+	int col_lengths[32];
+	int col_lengths_mask;	
 	
 	int perm[16];
 
@@ -52,6 +63,14 @@ static void swap(int* a, int* b)
 	int tmp = *a;
 	*a = *b;
 	*b = tmp;
+}
+
+void make_col_inverse(int* inverse, int* columns, int num)
+{
+	for (int i = 0; i < num; i++)
+	{
+		inverse[columns[i]] = i;
+	}
 }
 
 static void eval_perm_complete(FrakCrack* ck)
@@ -96,33 +115,6 @@ static void eval_perm_complete(FrakCrack* ck)
 	*/
 }
 
-static void enum_perm(FrakCrack* ck, int depth)
-{
-	// first we pick one free.
-	ck->perm[depth] = ck->remaining[0];
-
-
-	int left = ck->width - depth;
-	for (int i = 0; i < left; i++) {
-		ck->perm[depth] = ck->remaining[i];
-
-		swap(&ck->remaining[i], &ck->remaining[left - 1]);
-		if ((left - 1) <= ck->leave_columns) {
-			// fill out with whatever is left.
-			int at = ck->width - ck->leave_columns;
-			int src = 0;
-			while (at < ck->width) {
-				ck->perm[at++] = ck->remaining[src++];
-			}
-			eval_perm_complete(ck);
-		}
-		else {
-			enum_perm(ck, depth + 1);
-		}
-		swap(&ck->remaining[i], &ck->remaining[left - 1]);
-	}
-}
-
 static void make_perm_any(int* order, int columns, int perm_idx)
 {
 	for (int c = 0; c < columns; c++)
@@ -151,38 +143,86 @@ static void make_perm_6(int* order, int perm_idx)
 #define FC_IS_EVEN ((fc->width&1) == 0)
 #define ODD_IS_GOOD(row, column) ((r^c)&1) == 0
 
+void print_configuration(FrakCrack* fc, int* columns)
+{
+	char txt[1024];
+	for (int i = 0; i < fc->width; i++) {
+		int src_col = columns[i];
+		int length = fc->col_lengths[src_col];
+		char* src = fc->columns[src_col];
+		for (int r = 0; r < length; r++) {
+			txt[r * fc->width + i] = (*src++);
+		}
+	}
+	txt[fc->length] = 0;
+	fprintf(stderr, "print_config %s\n", txt);
+}
+
+static void make_expected_col_mask(FrakCrack* fc)
+{
+	fc->col_expected_mask = 0;
+	for (int i = 0; i < 6; i++) {
+		if ((fc->col_start + i) < fc->incomplete)
+			fc->col_expected_mask |= (1 << i);
+	}
+	fc->perms_skipped = 0;
+	fc->perms_included = 0;
+}
+
+static int is_valid_perm_char(FrakCrack* fc, char* selection, int* order, int num_columns)
+{
+	int gets_mask = 0;
+	for (int i = 0; i < num_columns; i++) {
+		if (fc->col_lengths_mask & (1 << selection[order[i]]))
+			gets_mask |= (1 << i);
+	}
+	return gets_mask == fc->col_expected_mask;
+}
+
 static void crack_selection_6(FrakCrack* fc)
 {
 	const int columns = 6;
+
 	int num_perm = 1;
 	for (int i = 1; i <= columns; i++)
 		num_perm *= i;
+
 
 	int order[8] = { 0 };
 	for (int p = 0; p < num_perm; p++) {
 		int cur_p = p;
 		make_perm_6(order, p);
-		int counts[25] = { 0 };
 
-		unsigned int subidx = (fc->num_selections * PERMS_6 + p) * 25;
+		unsigned int subidx = (fc->num_selections * PERMS_6 + p) * 26;
 		char* res_array = &fc->counts_segments[subidx];
+
+		if (!is_valid_perm_char(fc, fc->selection, order, columns)) {
+			res_array[25] = 0;
+			fc->perms_skipped++;
+			continue;
+		} else {
+			res_array[25] = 1;
+			fc->perms_included++;
+		}
+
+		int counts[25] = { 0 };
 
 		int debug = 0;
 		for (int odd = 0; odd < 2; odd++) {
-
 			if (FC_IS_EVEN && odd > 0)
 				break;
 			for (int c = odd; c < (columns-1); c += 2) {
 				int c0 = fc->selection[order[c]];
 				int c1 = fc->selection[order[c + 1]];
-				char *pm = &fc->premix_buffer[(c0 * fc->width + c1) * fc->rows];
-
+				// we do not go to the incomplete rows here.
+				int rows = fc->rows; 
+				char *pm = &fc->premix_buffer[(c0 * fc->width + c1) * rows];
 				if (FC_IS_EVEN) {
-					for (int r = 0; r < fc->rows; r++) {
+					for (int r = 0; r < rows; r++) {
 						res_array[pm[r]]++;
 					}
 				} else {
-					for (int r = 0; r < fc->rows; r++) {
+					for (int r = 0; r < rows; r++) {
 						if (ODD_IS_GOOD(r, c)) {
 							res_array[pm[r]]++;
 							debug++;
@@ -205,16 +245,21 @@ void next_selection(FrakCrack* fc, int i, int max, int cursor)
 			++cursor;
 		}
 	} else {
+		
 		int bits = 0;
-		for (int i = 0; i < max; i++)
+		int col_lengths = 0;
+		for (int i = 0; i < max; i++) {
 			bits |= (1 << fc->selection[i]);
+			col_lengths |= fc->col_lengths_mask & (1 << fc->selection[i]);
+		}
+		int should_have = fc->incomplete - fc->col_start;
+		if (should_have < 0) should_have = 0;
+		if (should_have > max) should_have = max;
+		if (__popcnt(col_lengths) != should_have) {
+			return;
+		}
+		
 		fc->selection_bits[fc->num_selections] = bits;
-		/*
-		printf("One selection ready:");
-		for (int i = 0; i < max; i++)
-			printf("%d ", fc->selection[i]);
-		printf("\n");
-		*/
 		crack_selection_6(fc);
 		fc->num_selections++;
 	}
@@ -234,7 +279,9 @@ static int cmp_ic(const void *va, const void *vb)
 	return a < b ? 1 : a > b ? -1 : 0;
 }
 
-static AICEntry g_entries_sorted[CHOOSE_14_6 * PERMS_6];
+static AICEntry g_entries_sorted_0[CHOOSE_14_6 * PERMS_6];
+static AICEntry g_entries_sorted_0[CHOOSE_14_6 * PERMS_6];
+static AICEntry g_entries_sorted_1[CHOOSE_14_6 * PERMS_6];
 
 void make_columns(int* out, int width, AICEntry* entry)
 {
@@ -263,14 +310,131 @@ static float ic_from_counts(int* counts, int* in_alles)
 
 static char get_premix(FrakCrack* fc, int c0, int c1, int row)
 {
-	return fc->premix_buffer[(c0 * fc->width + c1) * fc->rows + row];
+	return fc->premix_buffer[(c0 * fc->width + c1) * fc->incomplete_rows + row];
 }
 
-void have_12_fill_remaining(FrakCrack* fc, int has, int idx_i, int idx_j)
+// No incomplete columnar. Not odd.
+static void have_all_12_even_steven(FrakCrack* fc, int* columns, AICEntry a, AICEntry b, float* ic, int* total)
 {
-	AICEntry a = g_entries_sorted[idx_i];
-	AICEntry b = g_entries_sorted[idx_j];
+	int counts[25];
+	char *cnt0 = &fc->counts_segments[a.segment * 26];
+	char *cnt1 = &fc->counts_segments[b.segment * 26];
+	for (int c = 0; c < 25; c++) {
+		counts[c] = cnt0[c] + cnt1[c];
+	}
+	// Fill in remaining
+	for (int k = 12; k < (fc->width - 1); k++) {
+		int c0 = columns[k];
+		int c1 = columns[k + 1];
+		char *pm = &fc->premix_buffer[(c0 * fc->width + c1) * fc->incomplete_rows];
+		int rows = fc->col_lengths[c0];
+		if (fc->col_lengths[c1] != rows) fprintf(stderr, "Now c0/c1 mismatches.\n");
+		for (int r = 0; r < rows; r++) {
+			counts[pm[r]]++;
+		}
+	}
+	*ic = ic_from_counts(counts, total);
+}
 
+static void have_all_slow(FrakCrack* fc, int* columns, float* ic, int* total)
+{
+	// Let's do it the slow way.
+	char buf[1024];
+	for (int i = 0; i < fc->width; i++) {
+		int src_col = columns[i];
+		int length = fc->col_lengths[src_col];
+		char* src = fc->columns[src_col];
+		for (int r = 0; r < length; r++) {
+			buf[r * fc->width + i] = (*src++) - '1';
+		}
+	}
+	int amt = fc->length / 2;
+	int rd = 0;
+	int counts[32];
+	memset(counts, 0x00, 25 * sizeof(int));
+	for (int k = 0; k < amt; k++) {
+		char c0 = buf[rd++];
+		char c1 = buf[rd++];
+		counts[c0 * 5 + c1]++;
+	}
+	// print_configuration(fc, columns);
+	*ic = ic_from_counts(counts, total);
+	if (2 * (*total) != fc->length) {
+		fprintf(stderr, "Aaah! Invalid length in output.\n");
+	}
+}
+
+
+static int depth_i, depth_j;
+
+static void on_result(FrakCrack* fc, int* columns, float ic, int total)
+{
+	if (2*total != fc->length) {
+		fprintf(stderr, "Ah! %d != %d\n", total, fc->length);
+		exit(123);
+	}
+	if (ic > fc->best_rating) {
+		fc->best_rating = ic;
+		fprintf(stderr, "Highest rating at width %d ", fc->width);
+		for (int k = 0; k < fc->width; k++) {
+			fc->best_columns[k] = columns[k];
+			fprintf(stderr, "%c", 'A' + columns[k]);
+		}
+		fprintf(stderr, " => %f (depth:%d %d)\n", ic, depth_i, depth_j);
+	}
+}
+
+static void have_12_fill_remaining(FrakCrack* fc, int has, int idx_i, int idx_j)
+{
+	char cols_left[12];
+	int remaining = 0;
+	int perms = 1;
+	for (int i = 0; i < fc->width; i++) {
+		if (!(has & (1 << i))) {
+			cols_left[remaining++] = i;
+			perms *= remaining;
+		}
+	}
+
+	// fprintf(stderr, "Remaining columns %d with %d permutations to search\n", remaining, perms);
+	int columns[64];
+	make_columns(&columns[0], fc->width, &g_entries_sorted_0[idx_i]);
+	make_columns(&columns[6], fc->width, &g_entries_sorted_1[idx_j]);
+
+	for (int p = 0; p < perms; p++) {
+		int order[6];
+		make_perm_any(order, remaining, p);
+		int valid = 1;
+		for (int k = 0; k < remaining; k++) {
+			int col = cols_left[order[k]];
+			int expect_long = (12 + k) < fc->incomplete;
+			int is_long = (fc->col_lengths_mask & (1 << col)) ? 1 : 0;
+			if (expect_long != is_long) {
+				valid = 0;
+				break;
+			}
+			columns[12 + k] = col;
+		}
+		
+		if (!valid) {
+			continue;
+		}
+
+		float ic = -1;
+		int total;
+		if (!fc->incomplete && FC_IS_EVEN) {
+			have_all_12_even_steven(fc, columns, g_entries_sorted_0[idx_i], g_entries_sorted_1[idx_j], &ic, &total);
+			on_result(fc, columns, ic, total);
+		} else {
+			int total = 0;
+			have_all_slow(fc, columns, &ic, &total);
+			on_result(fc, columns, ic, total);
+		}
+	}
+}
+
+static void have_6_fill_remaining(FrakCrack* fc, int has, int idx_i)
+{
 	int cols_left[12];
 	int remaining = 0;
 	int perms = 1;
@@ -280,89 +444,84 @@ void have_12_fill_remaining(FrakCrack* fc, int has, int idx_i, int idx_j)
 			perms *= remaining;
 		}
 	}
-	// fprintf(stderr, "Remaining columns %d with %d permutations to search\n", remaining, perms);
 
+	// fprintf(stderr, "Remaining columns %d with %d permutations to search\n", remaining, perms);
 	int columns[64];
-	make_columns(&columns[0], fc->width, &g_entries_sorted[idx_i]);
-	make_columns(&columns[6], fc->width, &g_entries_sorted[idx_j]);
+	make_columns(&columns[0], fc->width, &g_entries_sorted_0[idx_i]);
 
 	for (int p = 0; p < perms; p++) {
 		int order[6];
 		make_perm_any(order, remaining, p);
+		int valid = 1;
 		for (int k = 0; k < remaining; k++) {
-			columns[12 + k] = cols_left[order[k]];
+			int col = cols_left[order[k]];
+			int expect_long = (6 + k) < fc->incomplete;
+			int is_long = (fc->col_lengths_mask & (1 << col)) ? 1 : 0;
+			if (expect_long != is_long) {
+				valid = 0;
+				break;
+			}
+			columns[6 + k] = col;
+		}
+		if (!valid) {
+			continue;
 		}
 
-		// Prep with counts that we already have.
-		int counts[25];
-		char *cnt0 = &fc->counts_segments[a.segment * 25];
-		char *cnt1 = &fc->counts_segments[b.segment * 25];
-		int total; float ic;
+		float ic = -1;
+		int total;
+		have_all_slow(fc, columns, &ic, &total);
+		on_result(fc, columns, ic, total);
+	}
+}
 
-		if (FC_IS_EVEN) {
-			for (int c = 0; c < 25; c++) {
-				counts[c] = cnt0[c] + cnt1[c];
-			}
-			// Fill in remaining
-			for (int k = 12; k < (fc->width - 1); k++) {
-				int c0 = columns[k];
-				int c1 = columns[k + 1];
-				char *pm = &fc->premix_buffer[(c0 * fc->width + c1) * fc->rows];
-				for (int r = 0; r < fc->rows; r++) {
-					counts[pm[r]]++;
-				}
-			}
-			ic = ic_from_counts(counts, &total);
-		} else {
-			// Let's do it the slow way.
-			char buf[1024];
-			for (int i = 0; i < fc->width; i++) {
-				char* coldata = fc->columns[columns[i]];
-				for (int r = 0; r < fc->rows; r++) {
-					buf[r * fc->width + i] = coldata[r] - '1';
-				}
-			}
-			int amt = fc->width * fc->rows / 2;
-			int rd = 0;
-			memset(counts, 0x00, 25 * sizeof(int));
-			for (int k = 0; k < amt; k++) {
-				char c0 = buf[rd++];
-				char c1 = buf[rd++];
-				counts[c0 * 5 + c1]++;
-			}
-			ic = ic_from_counts(counts, &total);
-		}
-		if (ic > fc->best_rating) {
-			fc->best_rating = ic;
-			fprintf(stderr, "Highest rating ");
-			char inv[64];
-			for (int k = 0; k < fc->width; k++) {
-				fc->best_columns[k] = columns[k];
-				inv[columns[k]] = 'A' + k;
-				fprintf(stderr, "%c", 'A' + columns[k]);
-			}
-			inv[fc->width] = 0;
-			fprintf(stderr, " inv %s => %f\n", inv, ic);
-		}
+static void have_0_fill_remaining(FrakCrack* fc)
+{
+	int perms = 1;
+	char col_ch[16];
+	for (int i = 0; i < fc->width; i++) {
+		perms *= (i+1);
+		col_ch[i] = i;
 	}
 
+	printf("Searching %d permutations at width %d...\n", perms, fc->width);
+	for (int p = 0; p < perms; p++) {
+		int order[12];
+		make_perm_any(order, fc->width, p);
+		if (!is_valid_perm_char(fc, col_ch, order, fc->width))
+			continue;
+
+		float ic = -1;
+		int total;
+		have_all_slow(fc, order, &ic, &total);
+		on_result(fc, order, ic, total);
+	}
 }
 
 void find_combinations(FrakCrack* fc)
 {
-	if (fc->width < 12) {
-		fprintf(stderr, "No need to find combinations!");
-	} else {
-		int search_count = 2000;
-		for (int i = 0; i < search_count; i++) {
+	if (fc->width < 6) {
+		have_0_fill_remaining(fc);
+	} else if (fc->width < 12) {
+		int search_count = 10000;
+		for (int i = 0; i < search_count && i < fc->section_a_count; i++) {
 			int max = fc->num_selections * PERMS_6;
-			int bits_i = g_entries_sorted[i].bits;
+			int bits = g_entries_sorted_0[i].bits;
+			have_6_fill_remaining(fc, bits, i);
+		}
+	} else {
+		int search_count = 10000;
+		int max_a = fc->section_a_count;
+		for (int i = 0; i < search_count && i < max_a; i++) {
+			int max_b = fc->section_b_count;
+			int bits_i = g_entries_sorted_0[i].bits;
 			int left_to_search = search_count;
-			for (int j = 0; j < max && left_to_search > 0; j++) {
-				int bits_j = g_entries_sorted[j].bits;
+			for (int j = 0; j < max_b && left_to_search > 0; j++) {
+				int bits_j = g_entries_sorted_1[j].bits;
 				if (__popcnt(bits_i|bits_j) == 12) {
+					depth_i = i;
+					depth_j = j;
+					// printf("one match [%d:%d] %d + %d = %d\n", i, j, __popcnt(bits_i), __popcnt(bits_j), __popcnt(bits_i | bits_j));
 					have_12_fill_remaining(fc, bits_i | bits_j, i, j);
-					//printf("one match [%d:%d] %d + %d = %d\n", i, j, __popcnt(bits_i), __popcnt(bits_j), __popcnt(bits_i | bits_j));
 					--left_to_search;
 				}
 			}
@@ -371,58 +530,45 @@ void find_combinations(FrakCrack* fc)
 }
 
 
-void make_ic_table(FrakCrack* fc)
+int make_ic_table(FrakCrack* fc, AICEntry* table)
 {
 	char* buf = fc->counts_segments;
 	int items = fc->num_selections * PERMS_6;
+	int p = 0;
 	for (int i = 0; i < items; i ++) {
-		int val[32];
-		for (int c = 0; c < 25; c++)
-			val[c] = buf[c] * (buf[c] - 1);
-		int tot = 0;
-		for (int c = 0; c < 25; c++)
-			tot += buf[c];
-		int sum = 0;
-		for (int c = 0; c < 25; c++)
-			sum += val[c];
-		g_entries_sorted[i].segment = i;
-		g_entries_sorted[i].count = sum;
-		g_entries_sorted[i].bits = fc->selection_bits[i / PERMS_6];
-		g_entries_sorted[i].ic = (float)sum / (float)(tot * (tot-1));
-		buf += 25;
+		if (buf[25]) {
+			int val[32];
+			for (int c = 0; c < 25; c++)
+				val[c] = buf[c] * (buf[c] - 1);
+			int tot = 0;
+			for (int c = 0; c < 25; c++)
+				tot += buf[c];
+			int sum = 0;
+			for (int c = 0; c < 25; c++)
+				sum += val[c];
+			table[p].segment = i;
+			table[p].count = sum;
+			table[p].bits = fc->selection_bits[i / PERMS_6];
+			table[p].ic = (float)sum / (float)(tot * (tot - 1));
+			++p;
+		}
+		buf += 26;
 	}
-	fprintf(stderr, "Made ic table with %d items\n", items);
-	qsort(g_entries_sorted, fc->num_selections, sizeof(AICEntry), cmp_ic);
-	fprintf(stderr, "Sorted it.");
-	find_combinations(fc);
+	//fprintf(stderr, "Made ic table with %d items starting at col %d\n", p, fc->col_start);
+	qsort(table, p, sizeof(AICEntry), cmp_ic);
+	//fprintf(stderr, "Sorted it.\n");	
+	return p;
 }
 
 void frak_crack(FrakCrack* fc, int width)
 {
 	fc->rows = fc->length / width;
+	fc->incomplete_rows = (fc->length + width - 1) / width;
+	fc->incomplete = fc->length % width;
 	fc->width = width;
-	fc->columns_buffer = (char*)malloc(fc->width * fc->rows);
+	fc->columns_buffer = (char*)malloc((fc->width) * (fc->rows + 2));
 	fc->columns = (char**)malloc(sizeof(char*) * fc->width);
-	for (int i = 0; i < width; i++) {
-		fc->columns[i] = (fc->columns_buffer + i * fc->rows);
-		for (int j = 0; j < fc->rows; j++) {
-			fc->columns[i][j] = fc->inputBuffer[width * j + i];
-			fc->columns[i][fc->rows] = 0;
-		}
-		printf("Column %d = %s\n", i, fc->columns[i]);
-	}
-
-	fc->premix_buffer = (char*)malloc(fc->rows * fc->width * fc->width);
-	for (int a = 0; a < width; a++) {
-		for (int b = 0; b < width; b++) {
-			char* ca = fc->columns[a];
-			char* cb = fc->columns[b];
-			char* out = &fc->premix_buffer[(a * fc->width + b) * fc->rows];
-			for (int i = 0; i < fc->rows; i++) {
-				out[i] = (ca[i] - '1') * 5 + (cb[i] - '1');
-			}
-		}
-	}
+	fc->premix_buffer = (char*)malloc(fc->incomplete_rows * fc->width * fc->width);
 
 	fc->leave_columns = 0;
 	fc->max_results = 100000;
@@ -430,19 +576,84 @@ void frak_crack(FrakCrack* fc, int width)
 	fc->result_width = 256;
 	fc->penalties = (int*)malloc(sizeof(int) * fc->max_results);
 	fc->results = (char*)malloc(fc->result_width * fc->max_results);
-	for (int i = 0; i < fc->width; i++)
+	
+	int combinations = 1;
+	for (int i = 0; i < fc->width; i++) {
 		fc->remaining[i] = i;
+		combinations *= 2;
+	}
 
-	next_selection(fc, 0, 6, 0);
-	fprintf(stderr, "There were %d selections\n", fc->num_selections);
+	fprintf(stderr, "=====> frak_crack at width %d <========\n", width);
+	for (int combination = 0; combination < combinations; combination++) {
+		if (__popcnt(combination) != fc->incomplete)
+			continue;
 
-	make_ic_table(fc);
+		fc->col_lengths_mask = combination;
+		for (int i = 0; i < fc->width; i++) {
+			fc->col_lengths[i] = fc->rows + ((combination & (1 << i)) ? 1 : 0);
+		}
 
+		if (0) {
+			fprintf(stderr, "Assuming column lengths (%x) => ", combination);
+			for (int i = 0; i < fc->width; i++) {
+				fprintf(stderr, "%d ", fc->col_lengths[i]);
+			}
+			fprintf(stderr, "\n");
+		}
 
+		const char* source = fc->inputBuffer;
+		char* out = fc->columns_buffer;
+		for (int i = 0; i < width; i++) {
+			fc->columns[i] = out;
+			for (int j = 0; j < fc->col_lengths[i]; j++) {
+				fc->columns[i][j] = *source++;
+				out++;
+			}
+			*out++ = 0;
+		}
 
-	/*
-	enum_perm(fc, 0);
-	*/
+		for (int a = 0; a < width; a++) {
+			for (int b = 0; b < width; b++) {
+				char* ca = fc->columns[a];
+				char* cb = fc->columns[b];
+				char* out = &fc->premix_buffer[(a * fc->width + b) * fc->rows];
+				int rows = fc->incomplete_rows;
+				for (int i = 0; i < fc->rows; i++) {
+					out[i] = (ca[i] - '1') * 5 + (cb[i] - '1');
+				}
+			}
+		}
+
+		if (width < 6) {
+			fc->col_start = 0;
+			make_expected_col_mask(fc);
+			find_combinations(fc);
+		} else if (width < 12) {
+			fc->col_start = 0;
+			fc->num_selections = 0;
+			make_expected_col_mask(fc);
+			next_selection(fc, 0, 6, 0);
+			fc->section_a_count = make_ic_table(fc, g_entries_sorted_0);
+			//fprintf(stderr, ".... searching 6 combination %d out of %d ... (%d)\n", combination, combinations, fc->section_a_count);
+			find_combinations(fc);
+		} else {
+			fc->col_start = 0;
+			fc->num_selections = 0;
+			make_expected_col_mask(fc);
+			next_selection(fc, 0, 6, 0);
+			fc->section_a_count = make_ic_table(fc, g_entries_sorted_0);
+			// fprintf(stderr, " => Section A had %d selections*perms PermSkipped %d PermIncluded %d\n", fc->section_a_count, fc->perms_skipped, fc->perms_included);
+
+			fc->col_start = 6;
+			fc->num_selections = 0;
+			make_expected_col_mask(fc);
+			next_selection(fc, 0, 6, 0);
+			fc->section_b_count = make_ic_table(fc, g_entries_sorted_1);
+			// fprintf(stderr, " => Section B had %d selections*perms PermSkipped %d PermIncluded %d\n", fc->section_b_count, fc->perms_skipped, fc->perms_included);
+			fprintf(stderr, "Searching 6+6 combination %d out of %d ... (%dx%d)\n", combination, combinations, fc->section_a_count, fc->section_b_count);
+			find_combinations(fc);
+		}
+	}
 }
 
 
@@ -460,45 +671,7 @@ void bulk_analyze_frakcrack(const char* buf, const char* orderBuf)
 	csc->length = txtLen;
 	csc->inputBuffer = buf;
 	strcpy(csc->best_alphabet, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-
-	frak_crack(csc, 13);
-
-	/*
-	int orderLen = strlen(orderBuf);
-	if (2 * txtLen != orderLen) {
-		fprintf(stderr, "orderLen != textLen * 2 (%d %d)\n", orderLen, txtLen);
-		return;
+	for (int w = 4; w < 14; w++) {
+		frak_crack(csc, w);
 	}
-
-	char preTransp[512];
-	int order[512];
-	for (int i = 0; i < txtLen; i++) {
-		char a = orderBuf[2 * i] - 'A';
-		char b = orderBuf[2 * i + 1] - 'A';
-		int idx = 25 * a + b;
-		order[i] = idx;
-		preTransp[idx] = buf[i];
-	}
-	preTransp[txtLen] = 0;
-	//printf("BEFORE TRANSP:%s\n", preTransp);
-
-	ColSubstCrack csc;
-	memset(&csc, 0x00, sizeof(ColSubstCrack));
-	csc.length = txtLen;
-	csc.inputBuffer = preTransp;
-	csc.outputOrder = order;
-	strcpy(csc.best_alphabet, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-
-	for (int w = 2; w < 8; w++) {
-		if ((txtLen % w) == 0) {
-			//printf("Column width %d is viable. (%d)\n", w, txtLen);
-			int divider = 4;
-			if (w <= 4) divider = 1;
-			try_columns(&csc, w, divider);
-		}
-	}
-
-	printf("\"%s\": { \"cracked\": \"%s", buf, csc.best_text);
-	printf("\", \"quadgram_rating\": \"%d\", \"meta_transposition_order\": \"%s\", \"best_width\": %d, \"alphabet\": \"%s\" }\n", csc.best_rating, orderBuf, csc.best_width, csc.best_alphabet);
-	*/
 }

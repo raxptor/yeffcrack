@@ -48,7 +48,10 @@ void source_coltransp(char *buf, int len, MTRand *rand);
 void permutation_walk(char* perm, MTRand* rand, int len);
 
 int compute_ic(const char* buf, int len);
+float compute_ic_f(const char* buf, int len);
+
 #define ENGLISH_IC 6860
+#define ENGLISH_IC_F 0.06860
 
 void hillclimb();
 
@@ -57,6 +60,7 @@ void bulk_analyze_subst(const char *buf);
 void bulk_analyze_colsubst(const char* buf, const char* order);
 void bulk_analyze_playfair(const char* txt, const char* order);
 void bulk_analyze_double_polybius(const char* txt, const char* order);
+void bulk_analyze_frakcrack(const char* buf, const char* orderBuf);
 int quick_subst_eval(const char* buf, MTRand* rnd, char* best_alphabet);
 
 #define RNDWALK_POLYBIUS            1
