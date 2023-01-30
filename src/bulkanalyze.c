@@ -60,7 +60,6 @@ void make_freq_alphabet(char* alphabet, const char* buf, int len)
 	}
 	for (int i = 0; i < len; i++) {
 		unsigned char c = buf[i] - 'A';
-		if (c >= 'J') c--;
 		if (c < 26) {
 			freqs[c].count++;
 		}

@@ -76,7 +76,7 @@
 	"eval_max": 700,
 	"analyze_prop": "ic",
 	"prio_eval": 650,
-	"max_depth": 1,
+	"max_depth": 2,
 	"coltransp_only": false,
 	"penalty_max": 10000
 }
