@@ -1,3 +1,5 @@
+var config = require('../../algoconf.json');
+
 define(function(require, exports, module) {
     var all_mods = require('./all.js');
     exports.transpose = {
@@ -72,17 +74,29 @@ define(function(require, exports, module) {
             return state.group_width == undefined;
         }
     }
+    exports.columnar_transposition = {
+        automake: function(cracks, state, output) {
+            for (var x in config.coltrans_keywords) {
+                output.push({
+                    type: "coltransp",
+                    data: {
+                        keyword: config.coltrans_keywords[x]
+                    }
+                });
+            }
+        },
+    }    
     exports.meta_transposition = {
-	automake: function(cracks, state, output) {
-		if (state.group_width == 2) {
-			output.push({
-				type: "meta_transposition"
-			});
-		}
-	},
-	check: function(cracks, state) {
-		return state.group_width == 2;
-	}
+        automake: function(cracks, state, output) {
+            if (state.group_width == 2) {
+                output.push({
+                    type: "meta_transposition"
+                });
+            }
+        },
+        check: function(cracks, state) {
+            return state.group_width == 2;
+        }
     }
     exports.complete_spirals = {
 	automake: function(cracks, state, output) {

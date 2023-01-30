@@ -4,7 +4,7 @@
 		{
 			"type":"input",
 			"data": {
-				"text": "5225121414145444424313115131553355535451423542244555422254325431514545455433315233412534121123222341114354545524225151412531444253114224214423515545411524335234222523522322215454153224231254523222"
+				"text": "5225121414145444424313114422453241545355533551315555422254325431514545455322232112143521433251333441114354545524225151412545515324412422411352444135411524335234222523522322223254521324223514545122"
 			}
 		}	
 	],	
@@ -22,8 +22,8 @@
 			"type":"stats"
 		}
 	],
-	"autocracks": ["transpose", "complete_spirals"],
-	"no_autocracks": ["group_up", "meta_transposition", "pair_sort"],
+	"autocracks": ["transpose"],
+	"no_autocracks": ["meta_transposition", "pair_sort", "columnar_transposition", "group_up", "complete_spirals"],
 	"no_cracks": [
 		{
 			"type": "remove_characters",
@@ -43,35 +43,9 @@
 		{
 			"type":"grid_pattern",
 			"data": {
-				"mode": "DiagTranspose0",
-				"inverse": true
-			},
-			"autogrid": true
-		},
-		{
-			"type":"grid_pattern",
-			"data": {
 				"mode": "HorizMirror"
 			},
 			"autogrid": true
-		},
-		{
-			"type": "coltransp",
-			"data": {
-				"keyword": "GBHLCJEAFKDMI"
-			}
-		},
-		{
-			"type": "coltransp",
-			"data": {
-				"keyword": "GBCJEAHLFKDIM"
-			}
-		},	
-		{
-			"type": "coltransp",
-			"data": {
-				"keyword": "DEGCLHKIMBNAJF"
-			}
 		},
 		{
 			"type":"grid_pattern",
@@ -86,20 +60,23 @@
 				"mode": "RowFlipOdd"
 			},
 			"autogrid": true
-		},
-		{
-			"type": "rail_fence",
-			"data": {
-				"width": 3
-			},
-			"unique": "rf"
 		}
 	],
-	"eval_min": 480,
+	"coltrans_keywords": [
+		"MANCHESTR",
+		"KEYWORD",
+		"CHALENG",
+		"CRYPTOGAM",
+		"HIACUWTRIITTHS",
+		"HIACUWTRS",
+		"GBHLCJEAFKDMI",
+		"DEGCLHKIMBNAJF"
+	],
+	"eval_min": 400,
 	"eval_max": 700,
 	"analyze_prop": "ic",
 	"prio_eval": 650,
-	"max_depth": 2,
+	"max_depth": 1,
 	"coltransp_only": false,
 	"penalty_max": 10000
 }

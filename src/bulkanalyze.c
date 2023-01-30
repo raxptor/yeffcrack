@@ -60,12 +60,13 @@ void make_freq_alphabet(char* alphabet, const char* buf, int len)
 	}
 	for (int i = 0; i < len; i++) {
 		unsigned char c = buf[i] - 'A';
+		if (c >= 'J') c--;
 		if (c < 26) {
 			freqs[c].count++;
 		}
 	}
 	qsort(freqs, 26, sizeof(AFreqEntry), cmp_freqs_a);
-	const char* order = "ETAINOSHRDLUCMFWYGPBVKQJXZ";
+	const char* order = "ETAINOSHRDLUCMFWYGPBVKQXZ";
 	for (int i = 0; i < 26; i++) {
 		alphabet[freqs[i].index] = order[i];
 	}
@@ -137,7 +138,7 @@ void bulk_analyze_subst(const char *buf)
 	int cur_score = 0;
 	int failures = 0;
 	int phase = 0;
-	for (int i=0;i<3000000;i++)
+	for (int i=0;i<6000000;i++)
 	//for (int i = 0; i < 2069; i++)
 	{
 		memcpy(tmp, workfrom, 26);
@@ -213,7 +214,7 @@ int quick_subst_eval(const char* buf, MTRand* rnd, char* best_alphabet)
 	int cur_score = 0;
 	int failures = 0;
 	int phase = 0;
-	for (int i = 0; i < 20000; i++)
+	for (int i = 0; i < 200000; i++)
 	{
 		memcpy(tmp, workfrom, 26);
 		//guided_swap(tmp, &rnd, phase);

@@ -63,6 +63,7 @@ void bulk_analyze_playfair(const char* txt, const char* order);
 void bulk_analyze_double_polybius(const char* txt, const char* order);
 void bulk_analyze_frakcrack(const char* buf, const char* orderBuf);
 int quick_subst_eval(const char* buf, MTRand* rnd, char* best_alphabet);
+int junkfilter_bigram(const char* buf, int length);
 
 #define RNDWALK_POLYBIUS            1
 #define RNDWALK_TRANSPOSITION       2
