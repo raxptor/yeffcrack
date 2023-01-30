@@ -253,7 +253,7 @@ define(function(require, exports, module) {
 					if (auto) {
 						// Checks are for manual entries.
 						if (auto.check && !auto.check(ckdefs, d)) {
-							console.log("Skipping ", config.cracks_insert[i], " because check.");
+							// console.log("Skipping ", config.cracks_insert[i], " because check.");
 							continue;
 						}
 					}

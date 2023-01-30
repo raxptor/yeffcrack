@@ -61,6 +61,9 @@ typedef struct FrakCrack_t {
 	int best_width;
 	char best_alphabet[32];
 	char best_text[256];
+
+	MTRand rand;
+	int best_quad;
 } FrakCrack;
 
 static void swap(int* a, int* b) {
@@ -354,9 +357,10 @@ static void have_all_slow(FrakCrack* fc, colindex_t* columns, float* ic, int* to
 		char c0 = buf[rd++];
 		char c1 = buf[rd++];
 		char letter = c0 * 5 + c1;
-		if (JUNK_FILTER) txt[outp++] = letter;
+		if (JUNK_FILTER) txt[outp++] = letter + 'A';
 		counts[letter]++;
 	}
+	txt[outp] = 0;
 
 	if (JUNK_FILTER) {
 		int penalty = compute_penalty(txt, outp - 3);
@@ -380,10 +384,30 @@ static void have_all_slow(FrakCrack* fc, colindex_t* columns, float* ic, int* to
 		}
 	}
 
+
 	// print_configuration(fc, columns);
 	*ic = ic_from_counts(counts, total);
 	if (2 * (*total) != 2*(fc->length/2)) {
 		fprintf(stderr, "Aaah! Invalid length in output.\n");
+	}
+
+	if (JUNK_FILTER) {
+		/*
+		if (*ic > (fc->best_rating - 0.007433)) {
+			char alphabet[64];
+			//strcpy(txt, "FAILURESTODECIPHERMAKEMESCRYWONDERFULLSLOWLYROLLINGWATERZUCCHINIFRUITORNOTWHOKNOWSSTUPIDITYWRENCH");
+			int quad = quick_subst_eval(txt, &fc->rand, alphabet);
+			if (quad > fc->best_quad) {
+				fprintf(stderr, "Best quad %d : ", quad);
+				for (int i = 0; i < outp; i++)
+					txt[i] = alphabet[txt[i] - 'A'];
+				fprintf(stderr, "%s\n", txt);
+				fc->best_quad = quad;
+			} else {
+				*ic = 0;
+			}
+		}
+		*/
 	}
 }
 
@@ -641,6 +665,7 @@ void frak_crack(const char* txt, int txtLen, int width)
 	fc->result_width = 256;
 	fc->penalties = (int*)malloc(sizeof(int) * fc->max_results);
 	fc->results = (char*)malloc(fc->result_width * fc->max_results);
+	fc->rand = seedRand(0x8fe2d2c0);
 
 	fc->best_rating = 0;
 	
@@ -731,7 +756,7 @@ void frak_crack(const char* txt, int txtLen, int width)
 void bulk_analyze_frakcrack(const char* buf, const char* orderBuf)
 {
 	int txtLen = strlen(buf);
-	//frak_crack(buf, txtLen, 13);
+	frak_crack(buf, txtLen, 11);
 	const int thinnest = 4, widest = 14;
 	for (int w = thinnest; w <= widest; w++) {
 		frak_crack(buf, txtLen, w);

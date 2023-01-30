@@ -875,7 +875,7 @@ define(function(require, exports, module) {
 							output.push(d.input[idx]);
 					}
 				}
-				d.grid.width = d.grid.width / 2;
+				d.grid.width = Math.floor(d.grid.width / 2);
 				d.output = output;
 			}
 		},

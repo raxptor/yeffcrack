@@ -1,10 +1,10 @@
 {
-	"database": "jimpantrans.sqlite3",
+	"database": "jimo.sqlite3",
 	"cracks_fixed_begin":[
 		{
 			"type":"input",
 			"data": {
-				"text": "15211 45414 54144 35415 52534 11521 55445 53252 45341 15541 33214 13542 41432 35253 45521 35555 44145 55152 11453 51454 14455 24143 33314 23431 11522 43155 34115 44555 21111 42522 42423 41453"
+				"text": "5225121414145444424313115131553355535451423542244555422254325431514545455433315233412534121123222341114354545524225151412531444253114224214423515545411524335234222523522322215454153224231254523222"
 			}
 		}	
 	],	
@@ -35,6 +35,12 @@
 	],
 	"cracks_insert": [
 		{
+			"type":"group_up",
+			"data": {
+				"width": 2
+			}
+		},	
+		{
 			"type":"grid_pattern",
 			"data": {
 				"mode": "DiagTranspose0",
@@ -52,19 +58,19 @@
 		{
 			"type": "coltransp",
 			"data": {
-				"keyword": "230C9187DB6A45"
+				"keyword": "GBHLCJEAFKDMI"
 			}
 		},
 		{
 			"type": "coltransp",
 			"data": {
-				"keyword": "2501CDA764B938"
+				"keyword": "GBCJEAHLFKDIM"
 			}
 		},	
 		{
 			"type": "coltransp",
 			"data": {
-				"keyword": "2A186C04B5D793"
+				"keyword": "DEGCLHKIMBNAJF"
 			}
 		},
 		{
@@ -93,7 +99,7 @@
 	"eval_max": 700,
 	"analyze_prop": "ic",
 	"prio_eval": 650,
-	"max_depth": 1,
+	"max_depth": 2,
 	"coltransp_only": false,
 	"penalty_max": 10000
 }
