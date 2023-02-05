@@ -62,6 +62,8 @@ typedef struct FrakCrack_t {
 	char best_alphabet[32];
 	char best_text[256];
 
+	const char* polybiuses;
+
 	MTRand rand;
 	int best_quad;
 } FrakCrack;
@@ -333,6 +335,9 @@ static void have_all_12_even_steven(FrakCrack* fc, colindex_t* columns, AICEntry
 	*ic = ic_from_counts(counts, total);
 }
 
+
+void source_box(char *buf, const char *word, MTRand *rand);
+
 static void have_all_slow(FrakCrack* fc, colindex_t* columns, float* ic, int* total)
 {
 	// Let's do it the slow way.
@@ -345,70 +350,67 @@ static void have_all_slow(FrakCrack* fc, colindex_t* columns, float* ic, int* to
 			buf[r * fc->width + i] = (*src++) - '1';
 		}
 	}
+
 	int amt = fc->length / 2;
-	int rd = 0;
+	
 	counts_t counts[32];
 	memset(counts, 0x00, 25 * sizeof(counts_t));
 
-
-	char txt[256];
+	int rd = 0;
+	char tmp[512];
 	int outp = 0;
 	for (int k = 0; k < amt; k++) {
 		char c0 = buf[rd++];
 		char c1 = buf[rd++];
 		char letter = c0 * 5 + c1;
-		if (JUNK_FILTER) txt[outp++] = letter + 'A';
 		counts[letter]++;
+		tmp[outp++] = letter + 'A';
 	}
-	txt[outp] = 0;
-
-	if (JUNK_FILTER) {
-		int penalty = compute_penalty(txt, outp - 3);
-		if (penalty > 10) {
-			*ic = 0;
-			*total = outp;
-			return;
-				//fprintf(stderr, "Filtered junk...\n");
-		}
-		int max0 = 0, max1 = 0;
-		for (int i = 0; i < 25; i++) {
-			if (counts[i] > max0) max0 = counts[i];
-		}
-		for (int i = 0; i < 25; i++) {
-			if (counts[i] != max0 && counts[i] > max1) max1 = counts[i];
-		}
-		if (max0 * 7 > outp || max1 * 7 > outp) {
-			*ic = 0;
-			*total = outp;
-			return;
-		}
-	}
-
-
-	// print_configuration(fc, columns);
 	*ic = ic_from_counts(counts, total);
+
+#if JUNK_FILTER
+	int p = compute_penalty(tmp, outp);
+	if (p > 70) {
+		*ic = 0;
+		*total = outp;
+		return;
+	}
+#endif
+
+	/*
+	char *polyb = fc->polybiuses;
+	if (polyb) {
+		if (*ic < 0.047 || *ic > 0.075) {
+			*ic = 0;
+			return;
+		}
+		// we do quadgram rating of all the polybius entries.
+		int highest = -1;
+		while (*polyb) {
+			char txt[256];
+			int outp = 0;
+			rd = 0;
+			for (int k = 0; k < amt; k++) {
+				char c0 = buf[rd++];
+				char c1 = buf[rd++];
+				char letter = c0 * 5 + c1;
+				txt[outp++] = polyb[letter];// + 'A';
+			}
+			txt[outp] = 0;
+			int t = quadgram_score_buf(txt, outp);;
+			if (t > highest) {
+				*ic = t;
+				highest = t;
+			}
+			polyb += 25;
+		}
+		return;
+	}
+	
 	if (2 * (*total) != 2*(fc->length/2)) {
 		fprintf(stderr, "Aaah! Invalid length in output.\n");
 	}
-
-	if (JUNK_FILTER) {
-		/*
-		if (*ic > (fc->best_rating - 0.007433)) {
-			char alphabet[64];
-			//strcpy(txt, "FAILURESTODECIPHERMAKEMESCRYWONDERFULLSLOWLYROLLINGWATERZUCCHINIFRUITORNOTWHOKNOWSSTUPIDITYWRENCH");
-			int quad = quick_subst_eval(txt, &fc->rand, alphabet);
-			if (quad > fc->best_quad) {
-				fprintf(stderr, "Best quad %d : ", quad);
-				for (int i = 0; i < outp; i++)
-					txt[i] = alphabet[txt[i] - 'A'];
-				fprintf(stderr, "%s\n", txt);
-				fc->best_quad = quad;
-			} else {
-				*ic = 0;
-			}
-		}
-		*/
-	}
+	*/
 }
 
 
@@ -563,7 +565,7 @@ void find_combinations(FrakCrack* fc)
 	if (fc->width < 6) {
 		have_0_fill_remaining(fc);
 	} else if (fc->width < 12) {
-		int search_count = 80000;
+		int search_count = 2000;
 		for (int i = 0; i < search_count && i < fc->section_a_count; i++) {
 			depth_i = i;
 			int max = fc->num_selections * PERMS_6;
@@ -644,12 +646,13 @@ int make_ic_table(FrakCrack* fc, AICEntry* table)
 	return p;
 }
 
-void frak_crack(const char* txt, int txtLen, int width)
+void frak_crack(const char* txt, int txtLen, int width, const char* polybiuses)
 {
 	FrakCrack* fc = malloc(sizeof(FrakCrack));
 	memset(fc, 0x00, sizeof(FrakCrack));
 	fc->length = txtLen;
 	fc->inputBuffer = txt;
+	fc->polybiuses = polybiuses;
 
 	fc->rows = fc->length / width;
 	fc->incomplete_rows = (fc->length + width - 1) / width;
@@ -753,17 +756,29 @@ void frak_crack(const char* txt, int txtLen, int width)
 }
 
 
-void bulk_analyze_frakcrack(const char* buf, const char* orderBuf)
+void bulk_analyze_frakcrack(const char* buf, const char* polybiuses)
 {
 	int txtLen = strlen(buf);
-	frak_crack(buf, txtLen, 11);
 	const int thinnest = 4, widest = 14;
 	for (int w = thinnest; w <= widest; w++) {
-		frak_crack(buf, txtLen, w);
+		frak_crack(buf, txtLen, w, polybiuses);
 	}
-	printf("\"%s\": { \"frak_scores\": \"", buf);
-	for (int w = thinnest; w <= widest; w++) {
-		printf("%d ", (int)(10000 * rating_at_width[w]));
+
+	if (polybiuses && strlen(polybiuses) > 0) {
+		printf("\"%s\": { \"quadgram_rating\": ", buf);
+		int max = 0;
+		for (int w = thinnest; w <= widest; w++) {
+			if (rating_at_width[w] > max)
+				max = rating_at_width[w];
+		}
+		printf("%d, \"meta_transposition_order\" : \"%s\" ", max, polybiuses);
+		printf("} ");
 	}
-	printf("\" } ");
+	else {
+		printf("\"%s\": { \"frak_scores\": \"", buf);
+		for (int w = thinnest; w <= widest; w++) {
+			printf("%d ", (int)(10000 * rating_at_width[w]));
+		}
+		printf("\" } ");
+	}
 }

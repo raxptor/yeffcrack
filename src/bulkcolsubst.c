@@ -177,6 +177,9 @@ void try_columns(ColSubstCrack* ck, int width, int divider)
 			ck->best_rating = eval;
 			ck->best_width = width;
 			memcpy(ck->best_alphabet, alphabet, 26);
+			// extend with unknown.
+			ck->best_alphabet[26] = '?';
+			ck->best_alphabet[27] = 0;
 			for (int i = 0; i < ck->length; i++)
 				ck->best_text[i] = alphabet[str[i]-'A'];
 			ck->best_text[ck->length] = 0;

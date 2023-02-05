@@ -7,7 +7,7 @@
 
 
 
-static void source_box(char *buf, const char *word, MTRand *rand)
+void source_box(char *buf, const char *word, MTRand *rand)
 {
 	char used[256];
 	memset(buf, 0x00, 26);

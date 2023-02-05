@@ -67,4 +67,20 @@ define(function(require, exports, module) {
 			console.error("Perm length=", perm, " but expected", width*width);
 		}
 	}
+	exports.chinese = function(perm, width, height) {
+		var down = true;
+		for (var x=width-1;x>=0;x--) {
+			if (down) {
+				for (var y=0;y<height;y++) {
+					perm.push(y*width+x);
+				}
+				down = false;
+			} else {
+				for (var y=0;y<height;y++) {
+					perm.push((height-y-1)*width+x);
+				}
+				down = true;
+			}
+		}
+	}
 });

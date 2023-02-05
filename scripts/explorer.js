@@ -27,7 +27,6 @@ define(function(require, exports, module) {
 		}
 
 		var errors = 0;
-		var pause = 0;
 		var prep = db.prepare("INSERT OR IGNORE INTO decrypt (uncracked, meta_transposition_order, length, complexity, eval, penalty, steps) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
 		function run_cracks(cracks, on_result) {
@@ -57,16 +56,7 @@ define(function(require, exports, module) {
 				}
 			}
 			if (on_result) {
-				if (++pause < 5000) {
-					on_result(d);
-				} else {
-					console.log("Pause...");
-					on_result(d);
-					/*setTimeout(function() {
-						on_result(d);
-					}, 100);*/
-					pause = 0;
-				}
+				on_result(d);
 			}
 			return !d.error;
 		}
@@ -97,7 +87,11 @@ define(function(require, exports, module) {
 					tmp.push(i);
 			}
 			allowed_grids[width] = tmp;
-			return tmp;
+			return tmp;			
+		}
+
+		function stats() {
+			console.log(`Processed ${total_count} variants with ${uniq_count} unique outputs (${norm_dupes} norm dupes), ${bad_eval} bad ${config.analyze_prop}, ${junk_count} junk. Rule skips ${rule_skips}. Culled trees=${culled} => Inserts:${db_inserts} OK:${db_ok} Err:${db_err}`);
 		}
 
 		function on_output(d, ckdefs) {
@@ -107,20 +101,27 @@ define(function(require, exports, module) {
 				prop = Math.floor(prop);
 
 			if (((++total_count) % 1000) == 0) {
-				console.log(`Processed ${total_count} variants with ${uniq_count} unique outputs (${norm_dupes} norm dupes), ${bad_eval} bad ${config.analyze_prop}, ${junk_count} junk. Rule skips ${rule_skips}. Culled trees=${culled} => Inserts:${db_inserts} OK:${db_ok} Err:${db_err}`);
+				stats();
 			}
-
+		
 			if (config.coltransp_only && !d.meta_transposition_order) {
 				rule_skips++;
 				return;
 			}
 
-			var txt = d.output.join('');
+			var txt = all_mods.output_to_string(d.output);
+
+			if (config.require_lengths.length > 0 && config.require_lengths.indexOf(txt.length) == -1) {
+				rule_skips++;
+				return;
+			}
+
 			var key;
 			if (d.meta_transposition_order)
 				key = txt + "/" + d.meta_transposition_order.join();
 			else
 				key = txt;
+				
 			
 			if (txt.length > 30 && !added[key]) {
 				//console.log(txt, config.analyze_prop, "=", prop);
@@ -191,12 +192,14 @@ define(function(require, exports, module) {
 			// Run the cracks up to this point.
 			var ckdefs = inserts.slice(0, depth);
 			var ckdefs_full = ckdefs.concat(end);
+			var local_depth = depth - begin.length;
 
 			//console.log("eval base", ckdefs);
 			//console.log("Running partial cracks", ckdefs, " depth", depth);
 			run_cracks(ckdefs, function(d) {
 
 				if (d.input.length < 10) {
+					//console.log("too short");
 					return;
 				}
 
@@ -208,7 +211,7 @@ define(function(require, exports, module) {
 					};
 				}
 				var cat = visit_cat[category_index];
-				var key = d.input.join('');
+				var key = all_mods.output_to_string(d.input);
 				if (d.meta_transposition_order)
 					key += + "/" + d.meta_transposition_order.join(',');
 
@@ -229,8 +232,9 @@ define(function(require, exports, module) {
 				});
 				
 				// no more.
-				if (depth == (depth_end+1))
+				if (depth == depth_end) {
 					return;
+				}
 
 				var allowed_grids = get_allowed_grids(d.input.length);
 
@@ -244,7 +248,7 @@ define(function(require, exports, module) {
 					}
 					// Automakes aren't checked.
 					var l0 = to_consider.length;
-					autoconf[ck].automake(ckdefs, d, to_consider);
+					autoconf[ck].automake(ckdefs, d, to_consider, tags, local_depth);
 				}
 
 				for (var i=0;i<config.cracks_insert.length;i++)
@@ -253,14 +257,13 @@ define(function(require, exports, module) {
 					if (auto) {
 						// Checks are for manual entries.
 						if (auto.check && !auto.check(ckdefs, d)) {
-							// console.log("Skipping ", config.cracks_insert[i], " because check.");
+							//console.log("Skipping ", config.cracks_insert[i], " because check.");
 							continue;
 						}
 					}
 					to_consider.push(config.cracks_insert[i]);
 				}
 
-				//console.log("To consider", to_consider);
 				var p = ckdefs.length;
 				ckdefs.push(null);
 				for (var i=0;i<to_consider.length;i++) {
@@ -293,5 +296,7 @@ define(function(require, exports, module) {
 
 		var inserts = new Array(32);
 		run_all(inserts, {}, 0);
+		stats();
+		console.log("Done!");
 	}
 })

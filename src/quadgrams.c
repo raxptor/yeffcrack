@@ -17,6 +17,8 @@ int table[32 * 32 * 32 * 32];
 
 int index_quadgram(const char *t)
 {
+	if (!t[0] || !t[1] || !t[2] || !t[3])
+		return 0;
 	int a = t[0] - 'A';
 	int b = t[1] - 'A';
 	int c = t[2] - 'A';
@@ -48,4 +50,5 @@ int quadgram_score_buf(const char *t, int length)
 	}
 	return tot;
 }
+
 

@@ -65,7 +65,7 @@ void make_freq_alphabet(char* alphabet, const char* buf, int len)
 		}
 	}
 	qsort(freqs, 26, sizeof(AFreqEntry), cmp_freqs_a);
-	const char* order = "ETAINOSHRDLUCMFWYGPBVKQXZ";
+	const char* order = "ETAINOSHRDLUCMFWYGPBVKQJXZ";
 	for (int i = 0; i < 26; i++) {
 		alphabet[freqs[i].index] = order[i];
 	}
@@ -86,7 +86,8 @@ void print_crack(void* whereto, const char *alphabet, const char* buf, int len)
 	char tmp[4096];
 	for (int i = 0; i < len; i++)
 	{
-		tmp[i] = alphabet[buf[i] - 'A'];
+		char r = alphabet[buf[i] - 'A'];
+		tmp[i] = r ? r : '?';
 	}
 	tmp[len] = 0;
 	fprintf(whereto, "%s", tmp);
@@ -137,7 +138,7 @@ void bulk_analyze_subst(const char *buf)
 	int cur_score = 0;
 	int failures = 0;
 	int phase = 0;
-	for (int i=0;i<6000000;i++)
+	for (int i=0;i<8000000;i++)
 	//for (int i = 0; i < 2069; i++)
 	{
 		memcpy(tmp, workfrom, 26);
@@ -164,7 +165,7 @@ void bulk_analyze_subst(const char *buf)
 			if (failures > 500)
 				phase = 1;
 
-			if (++failures > 3000) {
+			if (++failures > 5000) {
 				cur_score = 0;
 				
 				

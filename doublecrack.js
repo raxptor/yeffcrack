@@ -10,7 +10,7 @@ const db = new sqlite3.Database(conf.database, (err) => {
 	} else {
 		bulk.bucket_size = 2;
 		bulk.num_buckets = 5;
-		var query = "SELECT uncracked from decrypt WHERE cracked is NULL AND length=196 ORDER BY complexity ASC";
+		var query = "SELECT uncracked from decrypt WHERE cracked is NULL ORDER BY complexity ASC";
 		console.log(query);
 		bulk.crack_it(db, query, "double", function(cipher, r) {
 			if (r.quadgram_rating && r.cracked && r.alphabet) {

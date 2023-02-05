@@ -1,4 +1,5 @@
-var config = require('../../algoconf.json');
+const { join } = require('path');
+var config = require('../init.js').get_conf();
 
 define(function(require, exports, module) {
     var all_mods = require('./all.js');
@@ -74,6 +75,32 @@ define(function(require, exports, module) {
             return state.group_width == undefined;
         }
     }
+    exports.null_mask = {
+	automake: function(cracks, state, output, tags) {
+		if (tags["nf"]) return;
+		for (var i=2;i<16;i++) {
+			var max = Math.pow(2, i);
+			for (var j=0;j<max;j++) {
+				var mask = [];
+				for (var k=0;k<i;k++)
+				{
+					if ((j&(1<<k)) == 0)
+						mask.push('1');
+					else
+						mask.push('0')
+				}
+				output.push({
+					type: "null_mask",
+					data: {
+						inverted: false,
+						mask: mask.join('')
+					},
+					unique: "nf"
+				});	
+			}
+		}
+	}
+    };
     exports.columnar_transposition = {
         automake: function(cracks, state, output) {
             for (var x in config.coltrans_keywords) {
@@ -85,7 +112,25 @@ define(function(require, exports, module) {
                 });
             }
         },
-    }    
+    }
+    exports.fix_length = {
+	automake: function(cracks, state, output, tags, rel_depth) {
+		if (rel_depth != 0) return;
+		for (var x in config.fix_to_lengths) {
+			var l = config.fix_to_lengths[x];
+			// don't care about overlap, it will be purged as duplicate.
+			for (var i=0;i<state.input.length;i++) {
+				output.push({
+					type: "fix_length",
+					data: {
+						target_length: l,
+						offset: i
+					}
+				});
+			}
+		}
+	},
+	}
     exports.meta_transposition = {
         automake: function(cracks, state, output) {
             if (state.group_width == 2) {
@@ -112,7 +157,7 @@ define(function(require, exports, module) {
 					reverse: (m >=2),
 				},
 				unique: "spiral",
-				autogrid: true
+				autogrid: true,
 			});
 			}
 		}

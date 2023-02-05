@@ -2,7 +2,27 @@ define(function(require, exports, module) {
 	
 
 	var jim_routes = require("./jimroutes.js");
-	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'playfair', 'grid_view', 'coltransp', 'meta_transposition', 'stats'];
+	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'playfair', 'grid_view', 'coltransp', 'meta_transposition', 'null_mask', 'stats', 'fix_length', 'output'];
+
+	// calls process for each row.
+	function rowify(mod, d) {
+		if (!d.grid) {
+			mod.process(d, true);
+		} else {
+			var i = 0;
+			var w = d.grid.width;
+			var outp = [];
+			var inp = d.input;
+			var k = 0;
+			while (i < inp.length && ++k < 1000) {
+				d.input = inp.slice(i, i + w);
+				mod.process(d, true);
+				outp = outp.concat(d.output);
+				i += w;
+			}
+			d.output = outp;
+		}
+	}
 
 	function add_toggle_ui(d, prop, label) {
 		var inverse = document.createElement('input');
@@ -18,12 +38,16 @@ define(function(require, exports, module) {
 		d.container.appendChild(s);
 	}
 
-
 	function add_inverse_ui(d) {
 		add_toggle_ui(d, "inverse", "Encrypt");
 	}
 
-	function add_input_box(d, prop) { 
+	function add_input_box(d, prop, desc) { 
+		if (desc) {
+			var s = document.createElement('div');
+			s.textContent = desc;
+			d.container.appendChild(s);
+		}		
 		var fixed = document.createElement('input');
 		fixed.value = d.data[prop];
 		fixed.style.width = "300px";
@@ -69,6 +93,19 @@ define(function(require, exports, module) {
 			return String(val);
 		}
 	}
+
+	function output_to_string(arr) {
+		var out = [];
+		for (var x in arr) {
+			if (typeof arr[x] == 'number')
+				out.push(ungroup_number_to_str(arr[x]));
+			else
+				out.push(arr[x]);
+		}
+		return out.join('');
+	}
+
+	exports.output_to_string = output_to_string;
 
 	exports.input = {
 		create: function(d) { // returns 'data' object
@@ -191,6 +228,14 @@ define(function(require, exports, module) {
 		}
 	}
 
+	function invert_perm(p) {
+		var out = new Array(p.length);
+		for (var i=0;i<p.length;i++) {
+			out[p[i]] = i;
+		}
+		return out;
+	}
+
 	function make_pattern_perm_uncached(d) {
 		var perm = [];
 		var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
@@ -241,6 +286,10 @@ define(function(require, exports, module) {
 			}
 			case "SpiralBL": {
 				jim_routes.spiral(perm, d.grid.width, height, 3);
+				break;
+			}
+			case "Chinese": {
+				jim_routes.chinese(perm, d.grid.width, height);
 				break;
 			}
 			case "RmColR": {
@@ -298,7 +347,8 @@ define(function(require, exports, module) {
 				"SpiralTL"         : "SpiralTL",
 				"SpiralTR"         : "SpiralTR",
 				"SpiralBR"         : "SpiralBR",
-				"SpiralBL"         : "SpiralBL"
+				"SpiralBL"         : "SpiralBL",
+				"Chinese"          : "Chinese",
 			};
 			var cont = [];
 			for (var x in opts) {
@@ -378,16 +428,21 @@ define(function(require, exports, module) {
 	exports.rail_fence = {
 		create: function(d) { // returns 'data' object
 			return {
-				width: 3
+				width: 2,
+				by_rows: false
 			}
 		},
 		make_perm_rf: make_perm_rf,
 		make_ui: function(d) {
 			add_input_box(d, "width");
 			add_inverse_ui(d);
+			add_toggle_ui(d, "by_rows", "By rows");
 		},
 		title: "Rail Fence",
-		process: function(d) {
+		process: function(d, by_rows) {
+			if (d.data.by_rows && !by_rows)  {
+				return rowify(this, d);
+			}
 			apply_perm(d, make_perm_rf(d.data.width, d.input.length), !d.data.inverse);
 		}
 	};
@@ -401,14 +456,21 @@ define(function(require, exports, module) {
 		make_perm_rf: make_perm_rf,
 		make_ui: function(d) {
 			add_input_box(d, "str");
+			add_inverse_ui(d);
 		},
 		title: "Char2Num",
 		process: function(d) {
-			var out = [];
+			var out = [];			
 			for (var i=0;i<d.input.length;i++) {
-				var utp = d.data.str.indexOf(d.input[i]);
-				if (utp != -1 && d.data.str[utp] != '_')
-					out.push(utp);
+				if (d.data.inverse) {
+					var idx = d.input[i];
+					if (idx >= 0 && idx < d.data.str.length)
+						out.push(d.data.str.charAt(idx));
+				} else {
+					var utp = d.data.str.indexOf(d.input[i]);
+					if (utp != -1 && d.data.str[utp] != '_')
+						out.push(utp);
+				}
 			}
 			d.output = out;
 		}
@@ -432,13 +494,21 @@ define(function(require, exports, module) {
 			var filler = d.data.width * 100000;
 			var len = d.input.length - (d.data.width - 1)
 			var i = 0;
-			for (var i=0;i<len;i+=d.data.width) {
+			for (var i=0;i<len;i+=d.data.width) {			
 				var val = 0;
+				var scam = false;
 				for (var j=0;j<d.data.width;j++) {
+					if (d.input[i + j] == '?') {
+						scam = true;
+						break;
+					}
 					val *= 10;
 					val += d.input[i + j];
 				}
-				output.push(filler + val);
+				if (scam)
+					output.push("?");
+				else
+					output.push(filler + val);
 			}
 			d.output = output;
 			d.group_width = d.data.width;
@@ -466,9 +536,13 @@ define(function(require, exports, module) {
 		process: function(d) {
 			var output = [];
 			for (var x in d.input) {
-				var p = ungroup_number_to_str(d.input[x]);
-				for (var i=0;i<p.length;i++)
-					output.push(p.charAt(i) - '0');
+				if (d.input[x] == '?') {
+					output.push('?');
+				} else {
+					var p = ungroup_number_to_str(d.input[x]);
+					for (var i=0;i<p.length;i++)
+						output.push(p.charAt(i) - '0');
+				}
 			}
 			d.output = output;
 			delete d.group_width;
@@ -625,24 +699,12 @@ define(function(require, exports, module) {
 		create: function() { return {}; },
 		process: function(d) {
 			if (d.ui) {
-				if (typeof d.input == "string")
-					d.ui.textContent = d.input;
-				else {
-					var tmp = [];
-					for (var i=0;i<d.input.length;i++) {
-						var v = d.input[i];
-						if (typeof v == "number" && v >= 100)
-							tmp.push(String(v).substring(1));
-						else
-							tmp.push(v);
-					}
-					d.ui.textContent = tmp.join('');
-
-					if (d.meta_transposition_order) {
-						d.ui.textContent += "\n\nMetaTranspositionOrder:" + d.meta_transposition_order.join(' ');
-					}
+				d.ui.textContent = output_to_string(d.input);
+				if (d.meta_transposition_order) {
+					d.ui.textContent += "\n\nMetaTranspositionOrder:" + d.meta_transposition_order.join(' ');
 				}
 			}
+			d.output = d.input;
 		},
 		make_ui: function(d) {
 			var ta = document.createElement('textarea');
@@ -792,6 +854,7 @@ define(function(require, exports, module) {
 				return;
 			d.grid = { width: order.length };
 			var height = Math.floor((d.input.length)/(d.grid.width));
+			var height_round_up = Math.floor((d.input.length + d.grid.width-1)/(d.grid.width));
 			var output = [];
 
 			if (d.data.inverse) {
@@ -805,14 +868,14 @@ define(function(require, exports, module) {
 					}
 				}
 			} else {
-				var outbuf = new Array(d.grid.width * (height + 1));
+				var outbuf = new Array(d.grid.width * height_round_up);
 				var remainder = d.input.length - d.grid.width * height;
 				var readp = 0;
 				var in_order = new Array(order.length);
 				for (var x=0;x<d.grid.width;x++) {
 					in_order[order[x].index] = x;
 				}
-				for (var i=0;i<outbuf.length;i++) outbuf[i] = '?';
+				for (var i=0;i<outbuf.length;i++) outbuf[i] = '!';
 				for (var x=0;x<d.grid.width;x++) {
 					var src_col = in_order[x];
 					var col_height = src_col < remainder ? height + 1 : height;
@@ -823,13 +886,13 @@ define(function(require, exports, module) {
 				}
 				if (readp != d.input.length)
 					console.error("readp = ", readp, " total=" , d.input.length);
-				for (var y=0;y<(height+1);y++) {
+				for (var y=0;y<height_round_up;y++) {
 					var src_y = y;
 					if (d.data.double)
 						src_y = order[y].index;
 					for (var x=0;x<d.grid.width;x++) {
 						var idx = src_y * d.grid.width + x;
-						if (outbuf[idx] != '?')
+						if (output[idx] != '!')
 							output.push(outbuf[idx]);
 					}
 				}
@@ -892,7 +955,11 @@ define(function(require, exports, module) {
 				remove_prefix: true
 			}; 
 		},
-		process: function(d) {
+		process: function(d, by_rows) {
+			if (d.data.by_rows && !by_rows)  {
+				return rowify(this, d);
+			}
+
 			var rows = [];
 			for (var p=0;p<d.data.prefixes.length;p++) 
 				rows.push([]);
@@ -930,6 +997,7 @@ define(function(require, exports, module) {
 			add_input_box(d, "prefixes");
 			add_toggle_ui(d, "bycols", "ReadByCols");
 			add_toggle_ui(d, "remove_prefix", "RemovePrefix");
+			add_toggle_ui(d, "by_rows", "ByRows");
 		},
 	}
 	exports.cut_half_tb = {
@@ -950,7 +1018,63 @@ define(function(require, exports, module) {
 		make_ui: function(d) {
 		},
 		title: "CutHalfTB"
-	};	
+	};
+	exports.fix_length = {
+		create: function() { 
+			return {
+				target_length: 500,
+				offset: 0
+			};
+		},
+		process: function(d) {
+			var output = [];
+			var diff = d.data.target_length - d.input.length;
+			var tmp = d.input.splice(0, d.input.length);
+			if (diff > 0) {
+				var k = [];
+				for (var x=0;x<diff;x++) k.push('?');
+				tmp.splice(d.data.offset, 0, ...k);
+			} else {
+				/*
+				var o = d.data.offsetf;
+				if ((o-diff) > d.input.length) 
+					o = d.input.length + diff;
+					*/
+				
+				tmp.splice(d.data.offset, -diff);
+			}
+			d.output = tmp;
+		},
+		make_ui: function(d) {
+			add_input_box(d, "target_length", "Target Length");
+			add_input_box(d, "offset", "Mod Offset");
+		},
+		title: "Fix Length"
+	},
+	exports.null_mask = {
+		create: function() { 
+			return {
+				mask: "010101",
+				inverted: false
+			};
+		},
+		process: function(d) {
+			var output = [];
+			var m = d.data.mask;
+			if (m.length > 0) {
+				for (var i=0;i<d.input.length;i++) {
+					if (d.data.inverted != (d.data.mask.charAt(i % d.data.mask.length) == '1'))
+						output.push(d.input[i]);
+				}
+			}
+			d.output = output;
+		},
+		make_ui: function(d) {
+			add_input_box(d, "mask");
+			add_toggle_ui(d, "inverted", "Inverted" );
+		},
+		title: "Null Mask"
+	};		
 	function make_polyb_subst(d) {
 		var real = new Array(25);
 		var left = "ABCDEFGHIKLMNOPQRSTUVWXYZ";
@@ -980,7 +1104,13 @@ define(function(require, exports, module) {
 			if (c >= 0 && c < 25) {
 				if (indices !== undefined)
 					indices.push(c);
-				out.push(real[c]);
+				var c = real[c];
+				if (c >= '0' && c <= '9')
+					out.push(Number(c));
+				else
+					out.push(c);
+			} else {
+				out.push('[');
 			}
 		}
 	}	
@@ -1065,6 +1195,7 @@ define(function(require, exports, module) {
 			}
 
 			d.output = out;
+			delete d.group_width;
 		},
 		make_ui: function(d) {
 			

@@ -20,8 +20,8 @@ define(function(require, exports, module) {
 		var rl = 0;
 		var occurences = [0,0,0,0,0,0,0,0,0,0,0,0];
 		
-		// We don't care about last 14 because maybe that is a junk row in the cipher.
-		for (var i=0;i<(str.length-14);i++) {
+		// We don't care about last 3
+		for (var i=0;i<(str.length-3);i++) {
 			if (str[i] != last) {
 				last = str[i];
 				rl = 1;

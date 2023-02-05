@@ -33,3 +33,5 @@ CREATE INDEX IF NOT EXISTS "decrypt_complexity_eval" ON "decrypt" (
 	"eval"	ASC
 );
 COMMIT;
+PRAGMA JOURNAL_MODE = WAL;
+
