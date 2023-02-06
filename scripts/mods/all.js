@@ -1292,7 +1292,16 @@ define(function(require, exports, module) {
 				return;
 			}
 			var real = make_polyb_subst(d);
-			let letters = Math.floor(d.input.length/2);
+
+			var input = [];
+			for (var i=0;i<d.input.length;i++) {
+				if (d.data.inverse && i > 0 && d.input[i] == d.input[i-1]) {
+					input.push('X');
+				}
+				input.push(d.input[i]);
+			}
+
+			let letters = Math.floor(input.length/2);
 			let length = letters * 2;
 			var out = new Array(length);
 			var indices = new Array(length);
@@ -1301,9 +1310,9 @@ define(function(require, exports, module) {
 				throw "No number support";
 			} else {				
 				for (var i=0;i<length;i++) {
-					var idx = real.indexOf(d.input[i]);
+					var idx = real.indexOf(input[i]);
 					if (idx == -1) {
-						d.error = "Invalid playfair input " + d.input[i] + " " + real;
+						d.error = "Invalid playfair input " + input[i] + " " + real;
 						return;
 					}
 					indices[i] = idx;
@@ -1324,13 +1333,23 @@ define(function(require, exports, module) {
 				if (r0 == r1) {
 					r2 = r0;
 					r3 = r1;
-					c2 = (c0 + 4) % 5;
-					c3 = (c1 + 4) % 5;
+					if  (!d.data.inverse) {
+						c2 = (c0 + 4) % 5;
+						c3 = (c1 + 4) % 5;
+					} else {
+						c2 = (c0 + 1) % 5;
+						c3 = (c1 + 1) % 5;
+					}
 				} else if (c0 == c1) {
 					c2 = c0;
 					c3 = c1;
-					r2 = (r0 + 4) % 5;
-					r3 = (r1 + 4) % 5;
+					if (!d.data.inverse) {
+						r2 = (r0 + 4) % 5;
+						r3 = (r1 + 4) % 5;
+					} else {
+						r2 = (r0 + 1) % 5;
+						r3 = (r1 + 1) % 5;
+					}
 				} else {
 					c2 = c1;
 					c3 = c0;
