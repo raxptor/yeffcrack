@@ -23,8 +23,8 @@
 			"type":"stats"
 		}
 	],
-	"autocracks": ["transpose", "fix_length", "pair_sort"],
-	"fix_to_lengths": [195, 196, 197, 198, 199, 200, 201],
+	"require_in_output": "pair_sort",
+	"autocracks": ["transpose", "pair_sort", "group_up"],
 	"cracks_insert": [
 		{
 			"type":"grid_pattern",
@@ -46,29 +46,13 @@
 				"mode": "VertMirror"
 			},
 			"autogrid": true
-		},
-		{
-			"type":"rail_fence",
-			"data": {
-				"width": 2,
-				"by_rows": true
-			},
-			"autogrid": true
-		},
-		{
-			"type":"rail_fence",
-			"data": {
-				"width": 2,
-				"by_rows": true
-			},
-			"autogrid": true
-		}	
+		}
 	],
 	"eval_min": 500,
 	"eval_max": 700,
 	"analyze_prop": "ic",
 	"prio_eval": 650,
-	"max_depth": 2,
+	"max_depth": 4,
 	"coltransp_only": false,
 	"penalty_max": 150,
 	"require_lengths": []

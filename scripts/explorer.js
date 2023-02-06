@@ -82,7 +82,7 @@ define(function(require, exports, module) {
 			if (allowed_grids[width] !== undefined)
 				return allowed_grids[width];
 			var tmp = [];
-			for (var i=4;i<width;i++) {
+			for (var i=2;i<width;i++) {
 				if ((width % i) == 0)
 					tmp.push(i);
 			}
@@ -96,13 +96,27 @@ define(function(require, exports, module) {
 
 		function on_output(d, ckdefs) {
 
-			var prop = d[config.analyze_prop];
-			if (typeof prop == 'number')
-				prop = Math.floor(prop);
-
 			if (((++total_count) % 1000) == 0) {
 				stats();
 			}
+
+			var have = false;
+			if (config.require_in_output) {
+				for (var i=0;i<ckdefs.length;i++) {
+					if (ckdefs[i].type == config.require_in_output) {
+						have = true;
+						break;
+					}
+				}
+				if (!have) {
+					rule_skips++;
+					return;
+				}
+			}			
+
+			var prop = d[config.analyze_prop];
+			if (typeof prop == 'number')
+				prop = Math.floor(prop);
 		
 			if (config.coltransp_only && !d.meta_transposition_order) {
 				rule_skips++;
@@ -123,7 +137,7 @@ define(function(require, exports, module) {
 				key = txt;
 				
 			
-			if (txt.length > 30 && !added[key]) {
+			if (txt.length > 20 && !added[key]) {
 				//console.log(txt, config.analyze_prop, "=", prop);
 				added[key] = true;	
 

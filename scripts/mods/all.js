@@ -2,7 +2,7 @@ define(function(require, exports, module) {
 	
 
 	var jim_routes = require("./jimroutes.js");
-	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'playfair', 'grid_view', 'coltransp', 'meta_transposition', 'null_mask', 'stats', 'fix_length', 'output'];
+	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'playfair', 'grid_view', 'coltransp', 'meta_transposition', 'null_mask', 'stats', 'bigram_view', 'fix_length', 'output', 'shuffle'];
 
 	// calls process for each row.
 	function rowify(mod, d) {
@@ -92,6 +92,12 @@ define(function(require, exports, module) {
 		} else {
 			return String(val);
 		}
+	}
+
+	function outputify(val) {
+		if (typeof val == 'number')
+			return ungroup_number_to_str(val);
+		return val;
 	}
 
 	function output_to_string(arr) {
@@ -597,8 +603,11 @@ define(function(require, exports, module) {
 					for (var i=0;i<o1.length;i++)
 					{
 						output.push(o1[i]);
-						output.push(o2[i]);
+						if (i < o2.length)
+							output.push(o2[i]);
 					}
+					//if (o2.length > o1.length)
+					//	output.push(o2[o2.length-1]);
 				}
 				d.output = output;
 			}
@@ -837,6 +846,41 @@ define(function(require, exports, module) {
 		},
 		title: "Meta Transposition"
 	}
+
+	function mulberry32(a) {
+		return function() {
+		  var t = a += 0x6D2B79F5;
+		  t = Math.imul(t ^ t >>> 15, t | 1);
+		  t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+		  return ((t ^ t >>> 14) >>> 0);
+		}
+	}
+
+	exports.shuffle = {
+		create: function() { 
+			return {
+				seed: 0
+			}; 
+		},
+		process: function(d) {
+			var tmp = [];
+			for (var i=0;i<d.input.length;i++)
+				tmp.push(d.input[i]);
+			var out = [];
+			var r = mulberry32(Number(d.data.seed));
+			while (tmp.length > 0) {
+				var x = r() % tmp.length;
+				out.push(tmp[x]);
+				tmp.splice(x, 1);
+			}
+			d.output = out;
+		},
+		make_ui: function(d) {
+			add_input_box(d, "seed", "Random Seed");
+		},
+		title: "Random Shuffle"
+	}
+
 
 	exports.coltransp = {
 		create: function() { 
@@ -1337,10 +1381,100 @@ define(function(require, exports, module) {
 		},
 		title: "Playfair",
 		crack_step: false
-	};	
+	};
+	exports.bigram_view = {
+		create: function() { 
+			return {
+			}; 
+		},
+		process: function(d) {
+			d.output = d.input;
+			if (d.ui) {
+				var root = d.ui;
+				while (root.childNodes.length > 0) {
+					root.removeChild(root.childNodes[0]);
+				}
+
+				var symbols = {};
+				var bigrams = {};
+				var nsyms = 0;
+				for (var i=0;i<d.input.length;i++) {
+					var s = outputify(d.input[i]);
+					if (symbols[s] === undefined) {
+						symbols[s] = true;
+						nsyms++;
+					}
+					if (i > 0) {
+						var s0 = d.input[i-1];
+						var key = outputify(s0) + '/' + outputify(s);
+						if (!bigrams[key]) 
+							bigrams[key] = 1;
+						else
+							bigrams[key] = bigrams[key] + 1;
+					}
+				}
+
+				var rr = document.createElement('x-grid-row');
+				var dummy = document.createElement('x-grid-entry');
+				dummy.textContent = '.';
+				rr.appendChild(dummy);
+				for (var x in symbols) {
+					var b = document.createElement('x-grid-entry');
+					b.textContent = x;
+					rr.appendChild(b);
+				}				
+				root.appendChild(rr);
+
+				var colors = ["#CCCCCC", "#BBBBBB", "#22C941", "#F09FA6", "#08f", "#E249EE",  "#63FFAC", "#B79762", "#8FB0FF", "#997D87"];				
+				var counts = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+				var repeated = 0;
+				for (var y in symbols) {
+					var rr = document.createElement('x-grid-row');
+					var p = document.createElement('x-grid-entry');
+					p.textContent = y;
+					rr.appendChild(p);
+					for (var x in symbols) {
+						var b = document.createElement('x-grid-entry');
+						var key = outputify(x) + '/' + outputify(y);
+						var count = bigrams[key] || 0;
+						if (count > 1) repeated++;
+						counts[count]++;
+						if (x == y && count > 0) {
+							b.style.boxShadow = "inset 0px 0px 0px 2px #800";
+						}
+
+						if (count < colors.length) 
+							b.style.backgroundColor = colors[count];
+						else
+							b.style.backgroundColor = colors[colors.length-1];
+							
+						b.textContent = count;
+						rr.appendChild(b);
+					}
+					root.appendChild(rr);
+				}
+
+				var t = document.createElement('x-grid-row');
+				root.appendChild(t);
+				t.textContent = "Total repeated:" + repeated;
+				for (var i=2;i<counts.length;i++) {
+					if (counts[i] > 0)
+						t.textContent += "  " + i +":" + counts[i] + " ";
+				}				
+			}
+		},
+		make_ui: function(d) {
+			var ta = document.createElement('x-grid');
+			d.container.appendChild(ta);
+			return ta;
+		},
+		title: "Bigram View"
+	};
 	exports.grid_view = {
 		create: function() { 
-			return {}; 
+			return {
+				highlight: ""
+			}; 
 		},
 		process: function(d) {
 			d.output = d.input;
@@ -1356,6 +1490,7 @@ define(function(require, exports, module) {
 				"#00489C", "#6F0062", "#0CBD66", "#EEC3FF", "#456D75", "#B77B68", "#7A87A1", "#788D66", "#885578", "#FAD09F", "#FF8A9A", "#D157A0", "#BEC459", "#456648", "#0086ED", "#886F4C" ];
 				var colmap = {};
 				var colindex = 0;
+				var hl = d.data.highlight || "";
 				for (var y=0;y<height;y++) {
 					var rr = document.createElement('x-grid-row');
 					for (var x=0;x<d.grid.width;x++) {
@@ -1380,6 +1515,9 @@ define(function(require, exports, module) {
 						} else {
 							b.textContent = '_';
 						}
+						if (hl.length > 0) {
+							b.style.opacity = (b.textContent.startsWith(hl) || b.textContent.endsWith(hl)) ? "1.0" : "0.2";
+						}
 						rr.appendChild(b);
 					}
 					root.appendChild(rr);
@@ -1389,6 +1527,7 @@ define(function(require, exports, module) {
 		make_ui: function(d) {
 			var ta = document.createElement('x-grid');
 			d.container.appendChild(ta);
+			add_input_box(d, "highlight", "Highlight");
 			return ta;
 		},
 		title: "Grid View"
