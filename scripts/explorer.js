@@ -5,7 +5,7 @@ define(function(require, exports, module) {
 
 	exports.dry_run = false;
 
-	exports.run_algocheck = function(db, config) {
+	exports.run_algocheck = async function(db, config) {
 		console.log("Running algocheck", config, " dry_run", this.dry_run);
 		var begin = config.cracks_fixed_begin.slice(0);
 		var end = config.cracks_fixed_end.slice(0);
@@ -74,6 +74,7 @@ define(function(require, exports, module) {
 		var db_inserts = 0;
 		var rule_skips = 0;
 		var allowed_grids = { };
+		var db_pending = 0;
 
 		function get_allowed_grids(width) {
 			if (config.allowed_grids) {
@@ -186,6 +187,7 @@ define(function(require, exports, module) {
 						}
 						prep.run([txt, meta_transp_key, txt.length, ckdefs.length - begin.length - end.length, prop, penalty, JSON.stringify(steps)], function(err) {
 							if (err) { console.error(err); db_err++; } else db_ok++;
+							db_pending--;
 						});
 					}
 				}
@@ -194,8 +196,13 @@ define(function(require, exports, module) {
 
 		var depth_end = begin.length + config.max_depth;
 		var visit_cat = {};
+		
+		async function run_all(inserts, tags, depth) {
 
-		function run_all(inserts, tags, depth) {
+			while (db_pending > 0) {
+				console.log("now it is ", db_pending);
+				yield;
+			}
 
 			if (depth < begin.length) {
 				inserts[depth] = begin[depth];

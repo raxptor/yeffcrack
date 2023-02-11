@@ -1121,19 +1121,24 @@ define(function(require, exports, module) {
 	};		
 	function make_polyb_subst(d) {
 		var real = new Array(25);
-		var left = "ABCDEFGHIKLMNOPQRSTUVWXYZ";
 		var inp = d.data.box.toUpperCase();
-		for (var i=0;i<25;i++) {
+		var used = {};
+		var outp = 0;
+		for (var i=0;i<inp.length;i++) {
 			var c = inp.charAt(i);
-			if (i < inp.length && c != '?') {
-				real[i] = c;
-				left = left.replace(c, '');
+			if (c == 'J') c = 'I';
+			if (!used[c] && c != '?') {
+				used[c] = true;
+				real[outp++] = c;
 			}
 		}
 		var c = 0;
-		for (var i=0;i<25;i++) {
-			if (i >= inp.length || inp.charAt(i) == '?') {
-				real[i] = left.charAt(c++);
+		var alphabet = "ABCDEFGHIKLMNOPQRSTUVWXYZ";
+		for (var i=0;i<alphabet.length;i++) {
+			var c = alphabet.charAt(i);
+			if (!used[c] && c != '?') {
+				used[c] = true;
+				real[outp++] = c;
 			}
 		}
 		return real;
