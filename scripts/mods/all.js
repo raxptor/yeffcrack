@@ -2,7 +2,7 @@ define(function(require, exports, module) {
 	
 
 	var jim_routes = require("./jimroutes.js");
-	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'playfair', 'grid_view', 'coltransp', 'meta_transposition', 'null_mask', 'stats', 'bigram_view', 'fix_length', 'output', 'shuffle'];
+	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'playfair', 'grid_view', 'coltransp', 'meta_transposition', 'null_mask', 'stats', 'bigram_view', 'fix_length', 'output', 'shuffle', 'permutation'];
 
 	// calls process for each row.
 	function rowify(mod, d) {
@@ -189,12 +189,12 @@ define(function(require, exports, module) {
 		},
 		title: "Make Grid",
 		process: function(d) {
-			var s = [];
-			for (var i=2;i<100;i++) {
-				if ((d.input.length % i) == 0)
-					s.push(i);
-			}
 			if (d.ui) {
+				var s = [];
+				for (var i=2;i<100;i++) {
+					if ((d.input.length % i) == 0)
+						s.push(i);
+				}	
 				d.ui.sugg.textContent = " Suggested: " + s.join(', ');
 			}
 			d.grid = {
@@ -880,6 +880,28 @@ define(function(require, exports, module) {
 		},
 		title: "Random Shuffle"
 	}
+
+	exports.permutation = {
+		create: function() { 
+			return {
+				perm: "0,1,3,2"
+			}; 
+		},
+		process: function(d) {
+			var out = [];
+			var perm = d.data.perm.split(',');
+			for (var i=0;i<perm.length;i++) {
+				var idx = Number(perm[i]);
+				if (idx < d.input.length)
+					out.push(d.input[idx]);
+			}
+			d.output = out;
+		},
+		make_ui: function(d) {
+			add_input_box(d, "perm", "Permutation");
+		},
+		title: "Permutation"
+	}	
 
 
 	exports.coltransp = {

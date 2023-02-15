@@ -3,7 +3,8 @@ var config = require('../init.js').get_conf();
 
 define(function (require, exports, module) {
 	var all_mods = require('./all.js');
-	exports.transpose = {
+	var mega = require('./megapatterns.js');
+	exports.transpose = {		
 		automake: function (cracks, state, output) {
 			output.push({
 				type: "transpose",
@@ -133,6 +134,23 @@ define(function (require, exports, module) {
 		check: function (cracks, state) {
 			return state.group_width == 2;
 		}
+	}
+	exports.mega_patterns = {
+		automake: function (cracks, state, output) {
+			if (state.grid) {
+				var results = mega.make_megapatterns(config.mega_patterns, state.input.length, state.grid.width)
+				console.log("Mega patterns made ", Object.keys(results).length, " entries");
+				for (var x in results) {
+					output.push({
+						type: "permutation",
+						data: {
+							perm: results[x].perm.join(","),
+							name: results[x].name
+						},
+					});
+				}
+			}
+		}		
 	}
 	exports.complete_spirals = {
 		automake: function (cracks, state, output) {

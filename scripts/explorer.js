@@ -35,14 +35,10 @@ define(function(require, exports, module) {
 				try {
 					d.data = cracks[i].data;
 					delete d.output;
-
-					var old_width = d.grid_width;
 					if (cracks[i].set_grid) {
 						d.grid = { width: cracks[i].set_grid };
 					}
 					cracks[i].cls.process(d);
-					d.grid = old_width;
-
 					if (d.error) {
 						console.error(d.error);
 						errors++;
@@ -259,6 +255,7 @@ define(function(require, exports, module) {
 
 				var allowed_grids = get_allowed_grids(d.input.length);
 
+				console.log("Running autocracks width", grid_width);
 				var to_consider = [];
 				for (var i=0;i<config.autocracks.length;i++)
 				{

@@ -1,0 +1,47 @@
+{
+	"database": "chinese-botched.sqlite3",
+    "desc": "The Chinese Botched",
+	"cracks_fixed_begin":[
+		{
+			"type":"input",
+			"data": {
+				"text": "1213442114551314311141321242141411214424554145541113423121423421141514453513424254221354252344324535541253113524112521314315135453153412512434512152125432554521531545355421522513451515454455231335"
+			}
+		},
+		{
+			"type":"make_grid",
+			"data": {
+				"width": 14
+			}
+		}        
+	],	
+	"cracks_fixed_end":[
+		{
+			"type":"group_up",
+			"data": {
+				"width": 2
+			}
+		},
+		{
+			"type":"polybius"
+		},
+		{
+			"type":"stats"
+		}
+	],
+	"autocracks": ["mega_patterns"],
+	"mega_patterns": {
+		"messed_up_chinese": true,
+		"split_product": false,
+		"split": "tb"
+	},
+	"cracks_insert": [ ],
+	"eval_min": 400,
+	"eval_max": 700,
+	"analyze_prop": "ic",
+	"prio_eval": 650,
+	"max_depth": 1,
+	"coltransp_only": false,
+	"penalty_max": 150,
+	"require_lengths": []
+}
