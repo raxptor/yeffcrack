@@ -2,7 +2,7 @@ define(function(require, exports, module) {
 	
 
 	var jim_routes = require("./jimroutes.js");
-	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'playfair', 'grid_view', 'coltransp', 'meta_transposition', 'null_mask', 'stats', 'bigram_view', 'fix_length', 'output', 'shuffle', 'permutation'];
+	exports.modules_for_add = ['input', 'input_text', 'reverse', 'make_grid', 'pair_sort', 'char2num', 'bifid', 'bifid_rows', 'rail_fence', 'skip_nth', 'group_up', 'ungroup', 'remove_characters', 'transpose', 'cut_half', 'grid_pattern', 'cut_half_tb', 'polybius', 'playfair', 'grid_view', 'coltransp', 'meta_transposition', 'null_mask', 'stats', 'bigram_view', 'fix_length', 'output', 'shuffle', 'permutation', 'rowflip'];
 
 	// calls process for each row.
 	function rowify(mod, d) {
@@ -404,7 +404,6 @@ define(function(require, exports, module) {
 			}
 		}
 	};
-
 
 	function make_perm_rf(width, length) {
 		var rfs = [];
@@ -1428,6 +1427,36 @@ define(function(require, exports, module) {
 		title: "Playfair",
 		crack_step: false
 	};
+	exports.rowflip = {
+		create: function() { 
+			return {
+				mask: "0101010101010101010"
+			};
+		},
+		process: function(d) {
+			var mask = d.data.mask;
+			if (d.grid) {
+				var output = [];
+				var height = Math.floor((d.input.length + d.grid.width - 1)/(d.grid.width));
+				for (var y=0;y<height;y++) {
+					var flip = mask.charAt(y) == '1';
+					for (var x=0;x<d.grid.width;x++) {
+						var idx = (y*d.grid.width) + (flip ? (d.grid.width-x-1) : x);
+						if (idx < d.input.length)
+							output.push(d.input[idx]);
+					}
+				}
+				d.output = output;
+			} else {
+				d.output = d.inputa
+			}			
+		},
+		make_ui: function(d) {
+			add_input_box(d, "mask");
+		},
+		crack_step: true,
+		title: "Rowflips (crack)"
+	}
 	exports.bigram_view = {
 		create: function() { 
 			return {

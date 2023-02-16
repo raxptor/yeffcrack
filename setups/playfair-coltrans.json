@@ -1,0 +1,56 @@
+{
+	"database": "playfair-coltrans-2.sqlite3",
+	"mode": "wordlist",
+	"wordlist_slots": 2,
+	"wordlist": "data/wordlist10k.txt",
+	"cracks_fixed_begin":[
+		{
+			"type":"input",
+			"data": {
+				"text": "5225121414145444424313114422453241545355533551315555422254325431514545455322232112143521433251333441114354545524225151412545515324412422411352444135411524335234222523522322223254521324223514545122"
+			}
+		},
+		{
+			"type":"coltransp",
+			"data": {
+				"keyword": "PLACEHOLDER",
+				"$0": "keyword"
+			}
+		},
+		{
+			"type":"group_up",
+			"data": {
+				"width": 2
+			}
+		},
+		{
+			"type":"polybius",
+			"data": {
+				"box": "",
+				"$0": "box"
+			}
+		},
+		{
+			"type":"playfair",
+			"data": {
+				"box": "PLACEHOLDER",
+				"$1": "box"
+			}
+		}
+	],
+	"cracks_fixed_end":[
+		{
+			"type":"stats"
+		}
+	],
+	"autocracks": [],
+	"cracks_insert": [],
+	"eval_min": 510,
+	"eval_max": 690,
+	"analyze_prop": "ic",
+	"prio_eval": 650,
+	"max_depth": 3,
+	"coltransp_only": false,
+	"penalty_max": 50,
+	"require_lengths": []
+}

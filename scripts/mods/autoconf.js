@@ -135,23 +135,30 @@ define(function (require, exports, module) {
 			return state.group_width == 2;
 		}
 	}
-	exports.mega_patterns = {
-		automake: function (cracks, state, output) {
-			if (state.grid) {
-				var results = mega.make_megapatterns(config.mega_patterns, state.input.length, state.grid.width)
-				console.log("Mega patterns made ", Object.keys(results).length, " entries");
-				for (var x in results) {
-					output.push({
-						type: "permutation",
-						data: {
-							perm: results[x].perm.join(","),
-							name: results[x].name
-						},
-					});
+
+	function mega_patterns(which_config) {
+		return {
+			automake: function (cracks, state, output) {
+				if (state.grid) {
+					var results = mega.make_megapatterns(config[which_config], state.input.length, state.grid.width)
+					console.log("Mega patterns made ", Object.keys(results).length, " entries");
+					for (var x in results) {
+						output.push({
+							type: "permutation",
+							data: {
+								perm: results[x].perm.join(","),
+								name: results[x].name
+							},
+						});
+					}
 				}
 			}
-		}		
-	}
+		}
+	};
+
+	exports.mega_patterns = mega_patterns("mega_patterns");
+	exports.mega_patterns_2 = mega_patterns("mega_patterns_2");
+
 	exports.complete_spirals = {
 		automake: function (cracks, state, output) {
 			var spirals = ["SpiralTL", "SpiralTR", "SpiralBR", "SpiralBL"];

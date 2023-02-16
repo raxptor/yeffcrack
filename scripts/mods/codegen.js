@@ -158,5 +158,76 @@ define(function(require, exports, module) {
 		}
 	}
 
+	exports.bifid = {
+		struct: function(d) {
+		},
+		initial_guess: function(d) {
+		},
+		random_walk: function(d) {
+		},
+		mask_name: function(d) {
+			return '0';
+		},
+		write: function(d) {
+			d.lines.push(`
+				int half = cur_in_len/2;
+				for (int i = 0; i < half; i++) {
+					cur_out[2*i] = cur_in[i];
+					cur_out[2*i+1] = cur_in[i+half];
+				}
+				cur_out_len = cur_in_len;
+			`);
+		},
+		print: function(d) {
+		}
+	}		
+
+	exports.rowflip = {
+		struct: function(d) {
+			d.lines.push(`\tunsigned int ${d.prefix}_mask;`);
+		},
+		initial_guess: function(d) {
+			var given = 0;
+			for (var x=0;x<d.data.mask.length;x++) {
+				if (d.data.mask.charAt(x) == '1')
+					given += (1 <<x);
+			}
+			d.lines.push(`inst->${d.prefix}_mask = genRandLong(rand) & 0xffff;
+			if (as_given) {
+				inst->${d.prefix}_mask = ${given};
+			}
+			`);
+			
+		},
+		random_walk: function(d) {
+			d.lines.push(`inst->${d.prefix}_mask ^= 1 << (genRandLong(rand) & 0x1f);`);
+		},
+		mask_name: function(d) {
+			return 'RNDWALK_ROWFLIP'
+		},
+		write: function(d) {
+			var kl = d.process_d.grid.width;
+			d.lines.push(`
+				for (int i = 0; i < cur_in_len; i++) {
+					int col = i % ${kl};
+					int row = i / ${kl};
+					int flip = inst->${d.prefix}_mask & (1 << row);
+					int c;
+					if (flip)
+						c = row * ${kl} + ${kl-1} - col;
+					else
+						c = row * ${kl} + col;
+					cur_out[i] = cur_in[c];
+				}
+				cur_out_len = cur_in_len;
+			`);
+		},
+		print: function(d) {
+			d.lines.push(`
+				printf(" %d", inst->${d.prefix}_mask);
+			`);
+		}
+	}	
+
 
 });

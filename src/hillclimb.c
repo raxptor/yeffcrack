@@ -162,7 +162,7 @@ void hillclimb()
 		char cur[256];
 		if (algo_is_fractionated() && 1) {
 			new_crack(cur, frac_transp_stage_score, &rnd);
-			hillclimb_single(cur, frac_transp_stage_score, RNDWALK_TRANSPOSITION, 1, 2000, &rnd);
+			hillclimb_single(cur, frac_transp_stage_score, RNDWALK_TRANSPOSITION, 1, 800, &rnd);
 			make_freq_polybius(cur);
 		} else {
 			new_crack(cur, user_chosen_scoring, &rnd);
@@ -173,7 +173,7 @@ void hillclimb()
 		hillclimb_single(cur, user_chosen_scoring, 0xfffff, 3, 1000, &rnd);
 		hillclimb_single(cur, user_chosen_scoring, 0xfffff, 2, 1000, &rnd);
 		*/
-		hillclimb_single(cur, user_chosen_scoring, 0xfffff, 1, 500, &rnd);
+		hillclimb_single(cur, user_chosen_scoring, 0xfffff, 1, 20000, &rnd);
 		int score = algo_score(cur, user_chosen_scoring, 0);
 		if (score > best_ever) {
 			printf("Score: %d ", score);

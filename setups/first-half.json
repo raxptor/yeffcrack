@@ -1,0 +1,80 @@
+{
+	"database": "first-half.sqlite3",
+	"cracks_fixed_begin":[
+		{
+			"type":"input",
+			"data": {
+				"text": "75628 28591 62916 48164 91748 58464 74748 28483 81638 18174 74826 26475 83828 49175 74658 37575 75936 36565 81638 17585 75756 46282 92857 46382 75748 38165 81848 56485 64858 56382 72628 36281 81728 16463 75828 16483 63828 58163 6363"
+			}
+		}
+	],	
+	"cracks_fixed_end":[
+		{
+			"type":"group_up",
+			"data": {
+				"width": 2
+			}
+		},
+		{
+			"type":"polybius"
+		},
+		{
+			"type":"stats"
+		}
+	],
+	"autocracks": ["fix_length", "transpose", "columnar_transposition", "group_up", "complete_spirals"],
+	"fix_to_lengths": [98],
+	"cracks_insert": [
+		{
+			"type": "remove_characters",
+			"data": {
+				"always_nulls": "67890"
+			},
+			"unique": "rmchar"
+		},
+		{
+			"type":"grid_pattern",
+			"data": {
+				"mode": "Chinese"
+			},
+			"autogrid": true
+		},
+		{
+			"type":"grid_pattern",
+			"data": {
+				"mode": "HorizMirror"
+			},
+			"autogrid": true
+		},
+		{
+			"type":"grid_pattern",
+			"data": {
+				"mode": "VertMirror"
+			},
+			"autogrid": true
+		},
+		{
+			"type":"rail_fence",
+			"data": {
+				"width": 3,
+				"by_rows": false
+			},
+			"autogrid": true
+		},
+		{
+			"type":"grid_pattern",
+			"data": {
+				"mode": "RowFlipOdd"
+			},
+			"autogrid": true
+		}
+	],
+	"eval_min": 510,
+	"eval_max": 700,
+	"analyze_prop": "ic",
+	"prio_eval": 650,
+	"max_depth": 3,
+	"coltransp_only": false,
+	"penalty_max": 150,
+	"require_lengths": []
+}

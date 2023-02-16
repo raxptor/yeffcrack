@@ -135,7 +135,7 @@ define(function(require, exports, module) {
 		return cracks;
 	}
 
-	function generate_code(cracks, start, input, process_result_d) {
+	function generate_code(cracks, start, input, process_start_d, process_result_d) {
 		var lines = [];
 		var inp = [];
 		var inp_len;
@@ -245,7 +245,7 @@ define(function(require, exports, module) {
 		lines.push("unsigned char* cur_out = run->tmp0;");
 		lines.push("int cur_out_len = input_len;");
 		lines.push("");
-		var d = process_result_d;
+		var d = process_start_d;
 		d.input = input;
 		delete d.ui;
 		var bs = 0;		
@@ -303,6 +303,7 @@ define(function(require, exports, module) {
 		var input_at_step = 1;
 		var input_data = "";
 		var got_crack_step = false;
+		var d_at_start = null;
 		for (var i=0;i<cracks.length;i++) {
 			if (!cracks[i].enabled)
 				continue;
@@ -310,6 +311,9 @@ define(function(require, exports, module) {
 				d.ui = uis[i];
 				d.data = cracks[i].data;
 				delete d.output;
+				if (cracks[i].cls.crack_step && !d_at_start) {
+					d_at_start = JSON.parse(JSON.stringify(d));
+				}
 				cracks[i].cls.process(d);
 				if (d.error)
 					console.log(d.error);
@@ -327,7 +331,7 @@ define(function(require, exports, module) {
 			}
 		}
 		if  (uis) {
-			document.getElementById('code').textContent = generate_code(cracks, input_at_step, input_data, d)
+			document.getElementById('code').textContent = generate_code(cracks, input_at_step, input_data, d_at_start, d)
 		}
 		return true;
 	}

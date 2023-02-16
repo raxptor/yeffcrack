@@ -67,3 +67,4 @@ int junkfilter_bigram(const char* buf, int length);
 
 #define RNDWALK_POLYBIUS            1
 #define RNDWALK_TRANSPOSITION       2
+#define RNDWALK_ROWFLIP             4
