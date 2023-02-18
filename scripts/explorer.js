@@ -5,7 +5,7 @@ define(function(require, exports, module) {
 
 	exports.dry_run = false;
 
-	exports.run_algocheck = async function(db, config) {
+	exports.run_algocheck = function(db, config) {
 		console.log("Running algocheck", config, " dry_run", this.dry_run);
 		var begin = config.cracks_fixed_begin.slice(0);
 		var end = config.cracks_fixed_end.slice(0);
@@ -27,8 +27,7 @@ define(function(require, exports, module) {
 		}
 
 		var errors = 0;
-		var prep = db.prepare("INSERT OR IGNORE INTO decrypt (uncracked, meta_transposition_order, length, complexity, eval, penalty, steps) VALUES (?, ?, ?, ?, ?, ?, ?)");
-
+		var prep = db.prepare("INSERT OR IGNORE INTO decrypt (uncracked, meta_transposition_order, length, complexity, eval, penalty, bigrams, steps) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
 		function run_cracks(cracks, on_result) {
 			var d = { input: "" };
 			for (var i=0;i<cracks.length;i++) {
@@ -70,7 +69,6 @@ define(function(require, exports, module) {
 		var db_inserts = 0;
 		var rule_skips = 0;
 		var allowed_grids = { };
-		var db_pending = 0;
 
 		function get_allowed_grids(width) {
 			if (config.allowed_grids) {
@@ -146,6 +144,7 @@ define(function(require, exports, module) {
 				}
 
 				uniq_count++;
+				var bigrams = util.compute_repeated_bigrams(txt);
 				var penalty = util.compute_penalty(txt);
 				if (penalty > config.penalty_max) {
 					junk_count++;
@@ -181,9 +180,8 @@ define(function(require, exports, module) {
 								data: ckdefs[x].data
 							});
 						}
-						prep.run([txt, meta_transp_key, txt.length, ckdefs.length - begin.length - end.length, prop, penalty, JSON.stringify(steps)], function(err) {
+						prep.run([txt, meta_transp_key, txt.length, ckdefs.length - begin.length - end.length, prop, penalty, bigrams, JSON.stringify(steps)], function(err) {
 							if (err) { console.error(err); db_err++; } else db_ok++;
-							db_pending--;
 						});
 					}
 				}
@@ -193,12 +191,7 @@ define(function(require, exports, module) {
 		var depth_end = begin.length + config.max_depth;
 		var visit_cat = {};
 		
-		async function run_all(inserts, tags, depth) {
-
-			while (db_pending > 0) {
-				console.log("now it is ", db_pending);
-				yield;
-			}
+		function run_all(inserts, tags, depth) {
 
 			if (depth < begin.length) {
 				inserts[depth] = begin[depth];
@@ -236,9 +229,8 @@ define(function(require, exports, module) {
 					cat[key] = depth;
 				} else if (depth < cat[key]) {
 					cat[key] = depth;
-					// console.log("cat[", category_index ,"] Already visited at depth ", cat[key]," now at", depth, " updating...");
 				} else {
-					// console.log("cat[", category_index ,"] Already visited at depth ", cat[key]," now at", depth, " culling...");
+					//console.log("cat[", category_index ,"] Already visited at depth ", cat[key]," now at", depth, " culling...");
 					culled++;
 					return;
 				}
@@ -255,7 +247,6 @@ define(function(require, exports, module) {
 
 				var allowed_grids = get_allowed_grids(d.input.length);
 
-				console.log("Running autocracks width", grid_width);
 				var to_consider = [];
 				for (var i=0;i<config.autocracks.length;i++)
 				{

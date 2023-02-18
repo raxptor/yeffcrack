@@ -41,4 +41,24 @@ define(function(require, exports, module) {
 
 		return sum;
 	}
+
+	// computes number of repeated bigrams
+	exports.compute_repeated_bigrams = function(str) {
+		if (str.length < 3)
+			return 0;
+		var seen = new Array(26*26);
+		var s = str.charCodeAt(0) - 65;
+		var reps = 0;
+		for (var i=1;i<str.length;i++) {
+			var t = str.charCodeAt(i) - 65;
+			var idx = 25*s + t;
+			if (seen[idx] > 0) {
+				reps++;
+			} else {
+				seen[idx] = 1;
+			}
+			s = t;
+		}
+		return reps;
+	}	
 })

@@ -1,5 +1,7 @@
 define(function(require, exports, module) {
 
+	var jim = require('./jimroutes.js');
+
 	function make_chinese_vert(d) {
 		var down = true;
 		var out = [];
@@ -26,6 +28,67 @@ define(function(require, exports, module) {
 			right = !right;
 		}
 		return out;
+	}
+
+	function make_spirals(d, fn) {
+		for (var i=0;i<4;i++) {
+			var tmp = [];
+			jim.spiral(tmp, d.width, d.height, i);
+			fn(tmp, "spiral" + i);
+		}
+		return tmp;
+	}
+
+	function diagonal(length, width, height, x, y, dx, dy, spx, spy) {
+		var perm = [];
+		var len = 2*(width + height);
+		var used = {};
+		var count = 0;
+		for (var i=0;i<len;i++)
+		{
+			for (var j=-len;j<=len;j++)
+			{
+				var tx = x + dx*j;
+				var ty = y + dy*j;
+				if (tx >= 0 && tx < width && ty >= 0 && ty < height) {
+					var idx = ty * width + tx;
+					if (idx < length) {
+						if (!used[idx]) {
+							used[idx] = true;
+							++count;
+						}
+						perm.push(idx);
+						if (count == length)
+							break;
+					}
+				}
+			}
+			x += spx;
+			y += spy;
+		}
+		return perm;
+	}
+
+	function make_diagonals(d, fn) {
+		// is this enough?
+		fn(diagonal(d.length, d.width, d.height, 0, 0, 1, -1, 0, 1), "diag-tl");
+	}
+
+	function make_h2v(d, fn) {
+		var p0 = [];
+		var p1 = [];
+		for (var i=0;i<10000;i++) {
+			var x0 = i;
+			var y0 = i;
+			// go right, go down
+			for (var x=x0;x<d.width;x++) p0.push(idx(d, x, y0));
+			for (var y=y0+1;y<d.height;y++) p0.push(idx(d, x0, y));
+			// go down, go right
+			for (var y=y0;y<d.height;y++) p1.push(idx(d, x0, y));
+			for (var x=x0+1;x<d.width;x++) p1.push(idx(d, x, y0));
+		}
+		fn(p0, "r-d");
+		fn(p1, "d-r");
 	}
 
 	function make_chinese_vert_all(d, fn) {
@@ -106,6 +169,13 @@ define(function(require, exports, module) {
 		});
 	}
 
+	function transpose(d, perm) {
+		return perm.map(i => {
+			var c = xy(d, i);
+			return d.height * c.y + c.x;
+		});
+	}
+
 	function inverse(perm) {
 		var n = new Array(perm.length);
 		for (var i=0;i<perm.length;i++)
@@ -127,25 +197,9 @@ define(function(require, exports, module) {
 			return true;
 		}
 		return false;
-	}	
-
-	function make_variations(d, from, out) {
-		var added = false;
-		for (var key in from) {
-			out[key] = from[key];
-		}
-		for (var key in from) {
-			var perm = from[key].perm;
-			var name = from[key].name;
-			if (!d.config.reduced_variants) {
-				added |= insert_if_unique(d, out, horiz_mirror(d, perm), name + ".horiz");
-				added |= insert_if_unique(d, out, vert_mirror(d, perm), name + ".vert");
-				added |= insert_if_unique(d, out, perm.slice(0).reverse(), name + ".reverse");
-				added |= insert_if_unique(d, out, inverse(perm), name + ".inverse");
-			}
-		}
-		return added;
 	}
+
+	var cache = {};
 
 	exports.make_megapatterns = function(config, length, width) {
 
@@ -160,7 +214,12 @@ define(function(require, exports, module) {
 			height: height,
 			length: length,
 			config: config
-		};		
+		};
+
+		var cache_key = JSON.stringify(d);
+		if (cache[cache_key] !== undefined) {
+			return cache[cache_key];
+		}
 
 		if (config.split == "tb") {
 			var split = Math.floor(height / 2);
@@ -172,7 +231,7 @@ define(function(require, exports, module) {
 			var subpatterns = exports.make_megapatterns(config, length/2, width);
 			config.split = "tb";
 			if (!config.split_product) {
-				console.log("Re-merging patterns top/bottom with same above as below");
+				//console.log("Re-merging patterns top/bottom with same above as below");
 				for (var k in subpatterns) {
 					var perm = subpatterns[k].perm;
 					var nperm = [];
@@ -184,7 +243,7 @@ define(function(require, exports, module) {
 					subpatterns[k].perm = nperm;
 				}
 			} else {
-				console.log("Re-merging patterns top/bottom with all combinations above vs below");
+				//console.log("Re-merging patterns top/bottom with all combinations above vs below");
 				var out = {};
 				for (var k in subpatterns) {
 					var perm0 = subpatterns[k].perm;
@@ -206,7 +265,7 @@ define(function(require, exports, module) {
 				}
 				subpatterns = out;
 			}
-			console.log("Split patterns made", Object.keys(subpatterns).length, "entries");
+			//console.log("Split patterns made", Object.keys(subpatterns).length, "entries");
 			return subpatterns;
 		}
 		if (config.split == "lr") {
@@ -222,7 +281,7 @@ define(function(require, exports, module) {
 				width: split
 			};			
 			if (!config.split_product) {
-				console.log("Re-merging patterns left/right with same above as below");
+				//console.log("Re-merging patterns left/right with same above as below");
 				for (var k in subpatterns) {
 					var perm = subpatterns[k].perm;
 					var nperm = [];
@@ -234,7 +293,7 @@ define(function(require, exports, module) {
 					subpatterns[k].perm = nperm;
 				}
 			} else {
-				console.log("Re-merging patterns left/right with all combinations above vs below");
+				//console.log("Re-merging patterns left/right with all combinations above vs below");
 				var out = {};
 				for (var k in subpatterns) {
 					var perm0 = subpatterns[k].perm;
@@ -256,38 +315,94 @@ define(function(require, exports, module) {
 				}
 				subpatterns = out;
 			}
-			console.log("Split patterns made", Object.keys(subpatterns).length, "entries");
+			//console.log("Split patterns made", Object.keys(subpatterns).length, "entries");
 			return subpatterns;
 		}		
 
 		var result = {};
-		if (config.messed_up_chinese) {
-			if (!config.no_vertical) {
-				make_chinese_vert_all(d, function(perm, name) {
-					insert_if_unique(d, result, perm, name);
-				});
-			}
-			if (!config.no_horizontal) {
-				make_chinese_horiz_all(d, function(perm, name) {
-					insert_if_unique(d, result, perm, name);
-				});	
-			}
-		} else {
-			insert_if_unique(d, result, make_chinese_vert(d), "chinese_vert");
-			insert_if_unique(d, result, make_chinese_horiz(d), "chinese_horiz");
-		}
 
+		//console.log("Making patterns...", config.patterns);
+		config.patterns.forEach(pattern => {
+			switch (pattern) {
+				case "chinese_horiz_botched": 
+					make_chinese_horiz_all(d, function(perm, name) {
+						insert_if_unique(d, result, perm, name);
+					});
+					break;
+				case "chinese_vert_botched": 
+					make_chinese_vert_all(d, function(perm, name) {
+						insert_if_unique(d, result, perm, name);
+					});
+					break;
+				case "chinese_horiz": 
+					insert_if_unique(d, result, make_chinese_vert(d), "chinese_horiz");
+					break;
+				case "chinese_vert":
+					insert_if_unique(d, result, make_chinese_vert(d), "chinese_vert");
+					break;
+				case "chinese": // just both
+					insert_if_unique(d, result, make_chinese_vert(d), "chinese_horiz");
+					insert_if_unique(d, result, make_chinese_vert(d), "chinese_vert");
+					break;
+				case "spirals": 
+					make_spirals(d, function(perm, name) {
+						insert_if_unique(d, result, perm, name);
+					})
+					break;
+				case "diagonals": 
+					make_diagonals(d, function(perm, name) {
+						insert_if_unique(d, result, perm, name);
+					})
+					break;
+				case "h2v":
+					make_h2v(d, function(perm, name) {
+						insert_if_unique(d, result, perm, name);
+					});
+					break;
+			}
+		});
+
+		//console.log("Making variants...", config.variants);
 		while (true) {
 			var tmp = {};
-			if (make_variations(d, result, tmp)) {
-				console.log("Added more variations ", Object.keys(result).length, " => ", Object.keys(tmp).length);
+
+			var added = false;
+			for (var key in result) {
+				tmp[key] = result[key];
+			}
+
+			function process(fn, variant_name) {
+				for (var key in result) {
+					var perm = result[key].perm;
+					var name = result[key].name;
+					var var_perm = fn(perm);
+					var k = make_key(var_perm);
+					if (tmp[k] === undefined) {
+						tmp[k] = {
+							perm: var_perm,
+							name: name + variant_name
+						};
+						added = true;
+					}
+				}
+			}
+			config.variants.forEach(variant => {
+				switch (variant) {
+					case "horiz_mirror": process(perm => horiz_mirror(d, perm), ".horiz_mirr"); break;
+					case "vert_mirror": process(perm => horiz_mirror(d, perm), ".vert_mirr"); break;
+					case "transpose": process(perm => transpose(d, perm), ".transpose"); break;
+					case "reverse": process(perm => perm.slice(0).reverse(), ".reverse"); break;
+					case "inverse": process(perm => inverse(perm), ".inverse"); break;
+				}
+			});
+			if (added) {
 				result = tmp;
 			} else {
-				console.log("Done making variations...");
 				break;
 			}
 		}
-		console.log("Total count", Object.keys(result).length);
+
+		cache[cache_key] = result;
 		return result;
 	};
 });

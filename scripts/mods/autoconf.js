@@ -141,7 +141,6 @@ define(function (require, exports, module) {
 			automake: function (cracks, state, output) {
 				if (state.grid) {
 					var results = mega.make_megapatterns(config[which_config], state.input.length, state.grid.width)
-					console.log("Mega patterns made ", Object.keys(results).length, " entries");
 					for (var x in results) {
 						output.push({
 							type: "permutation",

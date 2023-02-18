@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS "decrypt" (
 	"length"	INTEGER NOT NULL,
 	"complexity"	INTEGER NOT NULL DEFAULT 0,
 	"eval"	NUMERIC NOT NULL,
+	"bigrams"   NUMERIC NOT NULL,
 	"penalty"	INTEGER NOT NULL DEFAULT 0,
 	"meta_transposition_order"	TEXT,
 	"quadgram_rating"	NUMERIC,

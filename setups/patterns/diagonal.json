@@ -1,0 +1,46 @@
+{
+	"database": "diagonal.sqlite3",
+	"desc": "Diagonals",
+	"cracks_fixed_begin":[
+		{
+			"type":"input",
+			"data": {
+				"text": "5225121414145444424313114422453241545355533551315555422254325431514545455322232112143521433251333441114354545524225151412545515324412422411352444135411524335234222523522322223254521324223514545122"
+			}
+		},
+		{
+			"type":"make_grid",
+			"data": {
+				"width": 14
+			}
+		}
+	],	
+	"cracks_fixed_end":[
+		{
+			"type":"group_up",
+			"data": {
+				"width": 2
+			}
+		},
+		{
+			"type":"polybius"
+		},
+		{
+			"type":"stats"
+		}
+	],
+	"autocracks": ["mega_patterns"],
+	"mega_patterns": {
+		"patterns": ["diagonals"],
+		"variants": ["horiz_mirror", "vert_mirror", "inverse", "transpose", "reverse"]
+	},
+	"cracks_insert": [ ],
+	"eval_min": 400,
+	"eval_max": 700,
+	"analyze_prop": "ic",
+	"prio_eval": 650,
+	"max_depth": 1,
+	"coltransp_only": false,
+	"penalty_max": 150,
+	"require_lengths": []
+}

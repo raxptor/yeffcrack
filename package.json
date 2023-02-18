@@ -1,0 +1,24 @@
+{
+  "name": "yeffcrack",
+  "version": "1.0.0",
+  "description": "",
+  "main": "explorer.js",
+  "dependencies": {
+    "async": "^3.2.4",
+    "sqlite3": "^5.1.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/raxptor/yeffcrack.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/raxptor/yeffcrack/issues"
+  },
+  "homepage": "https://github.com/raxptor/yeffcrack#readme"
+}

@@ -38,13 +38,11 @@
 	],
 	"autocracks": ["mega_patterns"],
 	"mega_patterns": {
-        "messed_up_chinese": true,
-        "reduced_variants": false,
-        "split_product": true,
-        "no_horizontal": false,
-        "no_vertical": true,
-        "split": "tb"
-    },
+		"patterns": ["chinese_horiz"],
+		"variations": ["horz_flip", "vert_flip", "inverse", "reverse"],
+		"split_product": false,
+		"split": "tb"
+	},
 	"cracks_insert": [ ],
 	"eval_min": 502,
 	"eval_max": 700,
